@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+# Pengguna lalai + autologin pada tty1
+id smart >/dev/null 2>&1 || useradd -m -s /bin/bash -G audio,video,render,input,lpadmin,netdev,plugdev,sudo smart
+passwd -d smart || true
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOT
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin smart --noclear %I \$TERM
+EOT
+cp /etc/skel/.bash_profile /home/smart/.bash_profile
+chown smart:smart /home/smart/.bash_profile
+# Servis
+systemctl enable NetworkManager cups avahi-daemon bluetooth smartos-update.timer || true
+# Flathub (untuk Blender terkini dan Steam)
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+# Fail .exe dibuka dengan Wine
+mkdir -p /etc/xdg && echo "[Default Applications]
+application/x-ms-dos-executable=wine.desktop
+application/x-msi=wine.desktop" > /etc/xdg/mimeapps.list
+# Tema boot
+plymouth-set-default-theme smartos
+update-initramfs -u
+# Branding
+echo "SmartOS" > /etc/issue

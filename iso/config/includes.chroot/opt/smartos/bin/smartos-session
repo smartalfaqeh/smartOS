@@ -1,0 +1,6 @@
+#!/bin/sh
+# Dijalankan di dalam cage (Wayland kiosk). Memulakan servis lalu shell.
+export WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1
+export MOZ_ENABLE_WAYLAND=1
+/usr/bin/python3 /opt/smartos/service/smartos_service.py &
+exec /usr/bin/python3 /opt/smartos/shell/smartos-shell.py

@@ -1,0 +1,73 @@
+# --- teras sistem ---
+live-boot
+live-config
+live-config-systemd
+systemd-sysv
+sudo
+locales
+dbus-user-session
+polkitd
+pkexec
+network-manager
+ca-certificates
+curl
+# --- paparan (Wayland kiosk) ---
+cage
+xwayland
+foot
+pcmanfm
+mesa-vulkan-drivers
+libgl1-mesa-dri
+mesa-utils
+vulkan-tools
+fonts-noto-core
+fonts-noto-color-emoji
+fonts-liberation
+# --- shell SmartOS ---
+python3
+python3-gi
+gir1.2-gtk-3.0
+gir1.2-webkit2-4.1
+# --- boot splash ---
+plymouth
+plymouth-themes
+# --- firmware ---
+firmware-linux
+firmware-misc-nonfree
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+# --- audio, bluetooth, storan ---
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+bluez
+udisks2
+gvfs
+# --- cetakan & pengimbas tanpa pemacu ---
+cups
+cups-client
+cups-filters
+ipp-usb
+avahi-daemon
+sane-airscan
+hplip
+printer-driver-all
+printer-driver-gutenprint
+printer-driver-brlaser
+# --- aplikasi asas ---
+firefox-esr
+libreoffice-writer
+libreoffice-calc
+libreoffice-impress
+libreoffice-gtk3
+blender
+# --- permainan & keserasian Windows ---
+wine
+winetricks
+lutris
+flatpak
+xdg-desktop-portal-gtk
+# --- sandbox ---
+bubblewrap

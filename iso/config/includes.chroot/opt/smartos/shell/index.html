@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SmartOS</title>
+<style>
+:root{--bg1:#0b3a45;--bg2:#03100f;--ink:#e2fbf8;--dim:#86cfcf;--acc:#2de2d6;--acc2:#0aa7c4;--gold:#f8cd3a;--card:rgba(255,255,255,.06);--line:rgba(134,207,207,.22)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:radial-gradient(ellipse at 50% 0%,var(--bg1),var(--bg2) 70%);color:var(--ink);font:15px/1.45 system-ui,"Noto Sans",sans-serif;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:8px 14px}
+button:hover{border-color:var(--acc)}
+button.pri{background:linear-gradient(100deg,var(--acc2),var(--acc));color:#02262b;border:0;font-weight:600}
+button.gold{background:var(--gold);color:#3a2c00;border:0;font-weight:600}
+input,select,textarea{background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:10px;padding:9px 12px;width:100%}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+header{display:flex;align-items:center;gap:16px;padding:12px 22px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:300;letter-spacing:.04em;white-space:nowrap}
+.brand img{height:34px}.brand b{font-weight:700;color:var(--acc)}
+#askf{flex:1;display:flex;gap:8px;max-width:640px;margin:0 auto}
+#mode{white-space:nowrap;min-width:92px}
+#mode.on{border-color:var(--gold);color:var(--gold)}
+.right{display:flex;gap:8px;align-items:center;color:var(--dim)}
+main{height:calc(100% - 59px);overflow:auto;padding:28px 6vw 60px}
+h2{font-weight:300;font-size:30px;margin:0 0 20px}
+h4{margin:30px 0 12px;color:var(--dim);font-weight:500}
+.make{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:22px 26px;border-radius:18px;border:1px solid rgba(248,205,58,.45);background:linear-gradient(120deg,rgba(248,205,58,.12),rgba(45,226,214,.08))}
+.make div{flex:1;min-width:240px}.make h3{margin:0 0 4px;font-size:22px;color:var(--gold)}.make p{margin:0;color:var(--dim)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;text-align:center;border-radius:14px;min-height:104px}
+.tile i{font-style:normal;font-size:34px;line-height:1}
+.tile span{font-size:13px;overflow-wrap:anywhere}
+.empty{color:var(--dim);font-size:14px}
+dialog{background:#0a2a30;color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:22px;width:min(720px,94vw);max-height:92vh;overflow:auto}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog h3{margin:0 0 12px}
+.row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
+.chip.warn{border-color:var(--gold);color:var(--gold)}
+iframe{width:100%;border:1px solid var(--line);border-radius:12px;background:#fff}
+#prev{height:320px;margin-top:12px}
+#viewer{position:fixed;inset:0;background:var(--bg2);display:none;flex-direction:column;z-index:20}
+#viewer.on{display:flex}
+#vbar{display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+#vbar strong{flex:1}
+#vf{flex:1;border:0;border-radius:0}
+#answer{position:fixed;top:64px;left:50%;transform:translateX(-50%);width:min(640px,92vw);max-height:60vh;overflow:auto;background:#0a2a30;border:1px solid var(--acc);border-radius:14px;padding:16px;white-space:pre-wrap;z-index:15;display:none}
+#answer.on{display:block}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--acc);color:#02262b;padding:9px 18px;border-radius:99px;display:none;z-index:30;max-width:90vw}
+.err{color:#ff9b9b}
+@media (prefers-reduced-motion:no-preference){.tile{transition:transform .15s}.tile:hover{transform:translateY(-3px)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="logo.png" alt=""><span>Smart<b>OS</b></span></div>
+  <form id="askf" autocomplete="off">
+    <button type="button" id="mode" title="Tukar antara tanya AI dan arahkan Blender">AI</button>
+    <input id="ask" placeholder="Tanya SmartOS…" aria-label="Tanya SmartOS">
+  </form>
+  <div class="right"><span id="clock"></span><button id="bset" title="Tetapan">⚙</button><button id="bpow" title="Kuasa">⏻</button></div>
+</header>
+<main>
+  <h2 id="hello"></h2>
+  <section class="make">
+    <div><h3>Make a Software</h3><p>Terangkan app yang anda mahu. SmartOS akan membinanya dan memasangnya untuk anda.</p></div>
+    <button class="gold" id="bmake">Cipta app</button>
+    <button id="bimp">Import .smartapp</button>
+  </section>
+  <h4>Aplikasi anda</h4><div id="mine" class="grid"></div>
+  <h4>Aplikasi sistem</h4><div id="sys" class="grid"></div>
+</main>
+
+<div id="answer"></div><div id="toast"></div>
+
+<dialog id="dmake">
+  <h3>Make a Software</h3>
+  <textarea id="mp" rows="3" placeholder="Contoh: app belanjawan bulanan dengan graf ringkas"></textarea>
+  <div class="row"><button class="pri" id="mgo">Bina</button><button id="mx">Tutup</button><span id="ms" class="chip"></span></div>
+  <div id="mres" hidden>
+    <iframe id="prev" sandbox="allow-scripts" title="Pratonton"></iframe>
+    <div class="row"><strong id="mn"></strong><div class="chips" id="mperm"></div></div>
+    <div class="row"><input id="mrev" placeholder="Mahu ubah sesuatu? Contoh: tambah mod gelap"><button id="mrg">Ubah</button></div>
+    <div class="row"><button class="gold" id="mins">Pasang app</button><button id="mdel">Buang draf</button></div>
+  </div>
+</dialog>
+
+<dialog id="dset">
+  <h3>Tetapan AI</h3>
+  <label>Penyedia<select id="sprov"></select></label>
+  <div class="row"><input id="smodel" placeholder="Model (kosong = lalai)"></div>
+  <div class="row"><input id="skey" type="password" placeholder="Kunci API (kosong = kekalkan)"></div>
+  <p id="sinfo" class="empty"></p>
+  <div class="row"><button class="pri" id="ssave">Simpan</button><button id="sx">Tutup</button></div>
+</dialog>
+
+<dialog id="dpow"><h3>Kuasa</h3><div class="row"><button id="preb">Mulakan semula</button><button id="poff">Matikan</button><button id="px">Batal</button></div></dialog>
+
+<div id="viewer"><div id="vbar"><strong id="vt"></strong><button id="vex">Eksport</button><button id="vun">Nyahpasang</button><button id="vcl">Tutup</button></div><iframe id="vf" sandbox="allow-scripts" title="App"></iframe></div>
+<input type="file" id="file" accept=".smartapp,application/json" hidden>
+
+<script>
+const TOKEN = location.hash.slice(1);
+const $ = id => document.getElementById(id);
+const api = (path, body) => fetch("/api" + path, {
+  method: body ? "POST" : "GET",
+  headers: {"X-SmartOS-Token": TOKEN, "Content-Type": "application/json"},
+  body: body ? JSON.stringify(body) : undefined
+}).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || r.statusText); return j; });
+const toast = (m, ms = 3200) => { const t = $("toast"); t.textContent = m; t.style.display = "block"; clearTimeout(toast.h); toast.h = setTimeout(() => t.style.display = "none", ms); };
+const PERM = {ai: "AI", storage: "Simpan data", printer: "Printer", blender: "Blender (boleh jalankan skrip)", network: "Internet"};
+const SYS = [["firefox","🌐","Pelayar"],["writer","📝","Penulis"],["calc","📊","Hamparan"],["impress","📽️","Pembentangan"],["blender","🧊","Blender"],["steam","🎮","Permainan"],["lutris","🍷","App Windows"],["files","📁","Fail"],["terminal","⌨️","Terminal"]];
+
+// ---- SDK + sandbox ----
+let SDK = "";
+fetch("/sdk/smartos-sdk.js").then(r => r.text()).then(t => SDK = t);
+const esc = s => JSON.stringify(s).replace(/</g, "\\u003c");
+function mount(frame, ctx, html) {
+  frame._ctx = ctx;
+  const net = ctx.granted.includes("network");
+  const csp = ["default-src 'none'", "script-src 'unsafe-inline'", "style-src 'unsafe-inline'",
+    "img-src data: blob:" + (net ? " https:" : ""), "font-src data:", "media-src data: blob:",
+    "connect-src " + (net ? "https:" : "'none'")].join("; ");
+  const inj = `<meta http-equiv="Content-Security-Policy" content="${csp}"><script>window.__APP=${esc({id: ctx.id})}<\/script><script>${SDK}<\/script>`;
+  frame.srcdoc = /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, m => m + inj) : "<!doctype html><head>" + inj + "</head>" + html;
+}
+const NEED = {"ai.ask": "ai", "storage.get": "storage", "storage.set": "storage", "printers.list": "printer", "printers.print": "printer", "blender.run": "blender", "notify": null};
+const HANDLE = {
+  "ai.ask": (c, p) => api("/ai/ask", {prompt: String(p)}).then(r => r.text),
+  "storage.get": (c, k) => api("/data/" + c.id + "?key=" + encodeURIComponent(k)).then(r => r.value),
+  "storage.set": (c, k, v) => api("/data/" + c.id, {key: k, value: v}),
+  "printers.list": () => api("/printers").then(r => r.printers),
+  "printers.print": (c, p, t) => api("/print", {printer: p, text: String(t)}),
+  "blender.run": (c, s) => api("/blender", {script: String(s)}),
+  "notify": (c, m) => toast(String(m).slice(0, 200))
+};
+addEventListener("message", async e => {
+  const f = [...document.querySelectorAll("iframe")].find(x => x.contentWindow === e.source);
+  if (!f || !f._ctx) return;
+  const {id, method, args} = e.data || {};
+  let res, err;
+  try {
+    if (!(method in HANDLE)) throw new Error("Kaedah tidak dikenali");
+    const need = NEED[method];
+    if (need && !f._ctx.granted.includes(need)) throw new Error('Kebenaran "' + PERM[need] + '" tidak diberi kepada app ini');
+    res = await HANDLE[method](f._ctx, ...(Array.isArray(args) ? args : []));
+  } catch (x) { err = x.message; }
+  e.source.postMessage({id, res, err}, "*");
+});
+
+// ---- grid ----
+function tile(icon, name, fn) {
+  const b = document.createElement("button"); b.className = "tile";
+  b.innerHTML = "<i></i><span></span>"; b.firstChild.textContent = icon; b.lastChild.textContent = name; b.onclick = fn; return b;
+}
+async function refresh() {
+  const g = $("mine"); g.innerHTML = "";
+  const {apps} = await api("/apps");
+  if (!apps.length) g.innerHTML = '<p class="empty">Belum ada app. Tekan “Cipta app” untuk mula.</p>';
+  apps.forEach(a => g.append(tile(a.icon, a.name, () => openApp(a))));
+}
+$("sys").append(...SYS.map(([id, ic, nm]) => tile(ic, nm, () => api("/launch", {name: id}).catch(e => toast(e.message)))));
+
+let cur = null;
+async function openApp(m) {
+  const a = await api("/apps/" + m.id);
+  cur = a.manifest; $("vt").textContent = a.manifest.icon + " " + a.manifest.name;
+  mount($("vf"), {id: m.id, granted: a.manifest.granted || []}, a.html);
+  $("viewer").classList.add("on");
+}
+$("vcl").onclick = () => { $("viewer").classList.remove("on"); $("vf").srcdoc = ""; };
+$("vun").onclick = async () => { if (!confirm("Nyahpasang “" + cur.name + "” dan padam datanya?")) return; await api("/apps/uninstall", {id: cur.id}); $("vcl").click(); refresh(); toast("App dinyahpasang"); };
+$("vex").onclick = async () => { try { const r = await api("/apps/" + cur.id + "/export", {}); toast("Disimpan di " + r.path, 6000); } catch (e) { toast(e.message); } };
+
+// ---- Make a Software ----
+let draft = null;
+const dm = $("dmake");
+async function preview(r) {
+  draft = r.draft_id;
+  const a = await api("/apps/draft/" + draft);
+  $("mres").hidden = false; $("mn").textContent = a.manifest.icon + " " + a.manifest.name;
+  $("mperm").innerHTML = "";
+  a.manifest.permissions.forEach(p => { const c = document.createElement("span"); c.className = "chip" + (p === "blender" || p === "network" ? " warn" : ""); c.textContent = PERM[p]; $("mperm").append(c); });
+  if (!a.manifest.permissions.length) $("mperm").innerHTML = '<span class="chip">Tiada kebenaran diminta</span>';
+  if (a.manifest.imported) $("ms").textContent = "App import: semak kebenaran dengan teliti";
+  mount($("prev"), {id: "draft-" + draft, granted: a.manifest.permissions.filter(p => p === "storage")}, a.html);
+}
+async function build(prompt, d) {
+  $("ms").textContent = "Membina…"; $("mgo").disabled = $("mrg").disabled = true;
+  try { await preview(await api("/apps/generate", {prompt, draft_id: d})); $("ms").textContent = "Pratonton (hanya storan aktif)"; }
+  catch (e) { $("ms").textContent = ""; toast(e.message, 6000); }
+  $("mgo").disabled = $("mrg").disabled = false;
+}
+$("bmake").onclick = () => { draft = null; $("mres").hidden = true; $("mp").value = ""; $("ms").textContent = ""; dm.showModal(); };
+$("mgo").onclick = () => $("mp").value.trim() && build($("mp").value.trim(), null);
+$("mrg").onclick = () => $("mrev").value.trim() && draft && build($("mrev").value.trim(), draft).then(() => $("mrev").value = "");
+$("mins").onclick = async () => { await api("/apps/install", {draft_id: draft}); dm.close(); refresh(); toast("App dipasang"); };
+$("mdel").onclick = () => { draft = null; $("mres").hidden = true; $("prev").srcdoc = ""; };
+$("mx").onclick = () => dm.close();
+$("bimp").onclick = () => $("file").click();
+$("file").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const r = await api("/apps/import", {package: await f.text()}); $("mp").value = ""; dm.showModal(); await preview(r); }
+  catch (x) { toast(x.message, 6000); }
+  e.target.value = "";
+};
+
+// ---- Bar AI ----
+let blenderMode = false;
+$("mode").onclick = () => { blenderMode = !blenderMode; $("mode").classList.toggle("on", blenderMode); $("mode").textContent = blenderMode ? "Blender" : "AI"; $("ask").placeholder = blenderMode ? "Arahkan Blender: contoh, buat 5 kubus bersusun" : "Tanya SmartOS…"; };
+$("askf").onsubmit = async e => {
+  e.preventDefault(); const p = $("ask").value.trim(); if (!p) return;
+  const a = $("answer"); a.className = "on"; a.textContent = "Berfikir…";
+  try {
+    if (blenderMode) { const r = await api("/blender/ask", {prompt: p}); a.textContent = (r.result.ok ? "Selesai.\n" : "Ralat dalam Blender:\n") + (r.result.output || "") + (r.result.error || "") + "\n\nSkrip:\n" + r.script; }
+    else a.textContent = (await api("/ai/ask", {prompt: p})).text;
+  } catch (x) { a.innerHTML = ""; const s = document.createElement("span"); s.className = "err"; s.textContent = x.message; a.append(s); }
+};
+addEventListener("keydown", e => { if (e.key === "Escape") { $("answer").className = ""; } });
+document.addEventListener("click", e => { if (!e.target.closest("#answer,#askf")) $("answer").className = ""; });
+
+// ---- Tetapan & kuasa ----
+$("bset").onclick = async () => {
+  const c = await api("/config"), s = await api("/system");
+  $("sprov").innerHTML = c.providers.map(p => `<option ${p === c.provider ? "selected" : ""}>${p}</option>`).join("");
+  $("smodel").value = c.model; $("skey").value = "";
+  $("sinfo").textContent = (c.has_key ? "Kunci API sudah ditetapkan. " : "Kunci API belum ditetapkan. ") + (s.blender ? "Blender: " + s.blender + ". " : "") + (s.last_update ? "Kemas kini terakhir: " + s.last_update : "Kemas kini automatik belum berjalan.");
+  $("dset").showModal();
+};
+$("ssave").onclick = async () => { await api("/config", {provider: $("sprov").value, model: $("smodel").value, key: $("skey").value}); $("dset").close(); toast("Tetapan disimpan"); };
+$("sx").onclick = () => $("dset").close();
+$("bpow").onclick = () => $("dpow").showModal(); $("px").onclick = () => $("dpow").close();
+$("preb").onclick = () => api("/power", {action: "reboot"}); $("poff").onclick = () => api("/power", {action: "poweroff"});
+
+// ---- mula ----
+const h = new Date().getHours();
+$("hello").textContent = (h < 11 ? "Selamat pagi" : h < 15 ? "Selamat tengah hari" : h < 19 ? "Selamat petang" : "Selamat malam") + ". Apa yang anda mahu bina hari ini?";
+const tick = () => $("clock").textContent = new Date().toLocaleTimeString("ms-MY", {hour: "2-digit", minute: "2-digit"});
+tick(); setInterval(tick, 20000);
+refresh().catch(e => toast(e.message));
+</script>
+</body>
+</html>

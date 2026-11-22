@@ -1,0 +1,7 @@
+[Plymouth Theme]
+Name=SmartOS
+Description=Skrin boot SmartOS
+ModuleName=script
+[script]
+ImageDir=/usr/share/plymouth/themes/smartos
+ScriptFile=/usr/share/plymouth/themes/smartos/smartos.script

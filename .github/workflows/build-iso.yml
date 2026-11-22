@@ -1,0 +1,54 @@
+name: Bina ISO SmartOS
+
+on:
+  workflow_dispatch:      # tekan "Run workflow" secara manual
+  push:
+    tags: ["v*"]          # atau tolak tag seperti v0.1
+
+permissions:
+  contents: write         # untuk menerbitkan Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kosongkan ruang cakera
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          df -h /
+
+      - name: Bina ISO dalam kontena Debian trixie
+        run: docker run --rm --privileged -v "$PWD":/work -w /work debian:trixie ./build.sh
+
+      - name: Checksum dan pecah (had Release 2 GB sefail)
+        run: |
+          ls -lh smartos*.iso
+          sha256sum smartos.iso > smartos.iso.sha256
+          split -b 1900M -d smartos.iso smartos.iso.part-
+          ls -lh smartos.iso.part-*
+
+      - name: Simpan log bina
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore
+
+      - name: Terbitkan Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.run_number) }}
+          name: SmartOS ISO (bina #${{ github.run_number }})
+          body: |
+            Muat turun SEMUA fail `smartos.iso.part-*` dan `smartos.iso.sha256`, kemudian gabungkan:
+            - Linux/Mac: `cat smartos.iso.part-* > smartos.iso && sha256sum -c smartos.iso.sha256`
+            - Windows (cmd): `copy /b smartos.iso.part-00+smartos.iso.part-01+smartos.iso.part-02 smartos.iso`
+              (sertakan semua bahagian mengikut urutan)
+          files: |
+            smartos.iso.part-*
+            smartos.iso.sha256

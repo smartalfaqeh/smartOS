@@ -6,6 +6,8 @@ cd "$(dirname "$0")"
 [ "$(id -u)" = 0 ] || { echo "Jalankan sebagai root (sudo ./build.sh)"; exit 1; }
 apt-get update
 apt-get install -y live-build debootstrap xorriso squashfs-tools debian-archive-keyring
+# muat naik melalui web membuang bit "boleh laku", jadi tetapkan semula
+chmod +x iso/auto/config iso/config/hooks/live/* iso/config/includes.chroot/opt/smartos/bin/* iso/config/includes.chroot/opt/smartos/service/*.py iso/config/includes.chroot/opt/smartos/shell/*.py 2>/dev/null || true
 cd iso
 # live-build baharu menggunakan nama includes.chroot_after_packages
 rm -rf config/includes.chroot_after_packages

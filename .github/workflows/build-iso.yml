@@ -22,7 +22,7 @@ jobs:
           df -h /
 
       - name: Bina ISO dalam kontena Debian trixie
-        run: docker run --rm --privileged -v "$PWD":/work -w /work debian:trixie ./build.sh
+        run: docker run --rm --privileged -v "$PWD":/work -w /work debian:trixie bash ./build.sh
 
       - name: Checksum dan pecah (had Release 2 GB sefail)
         run: |

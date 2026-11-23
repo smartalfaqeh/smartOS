@@ -3,7 +3,7 @@
 import json, os, subprocess, sys, tempfile, time, urllib.request, urllib.error
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent / "iso/config/includes.chroot/opt/smartos"
+ROOT = Path(__file__).resolve().parent.parent / "iso/config/includes.chroot_after_packages/opt/smartos"
 home = tempfile.mkdtemp()
 env = {**os.environ, "SMARTOS_HOME": home, "SMARTOS_PORT": "7899", "XDG_RUNTIME_DIR": home}
 Path(home, ".config/smartos").mkdir(parents=True)

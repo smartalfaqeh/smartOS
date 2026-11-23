@@ -11,6 +11,13 @@ cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOT
 ExecStart=
 ExecStart=-/sbin/agetty --autologin smart --noclear %I \$TERM
 EOT
+# .bash_profile dicipta di sini (fail bertitik sering hilang semasa muat naik web)
+cat > /etc/skel/.bash_profile <<'EOT'
+# Mulakan SmartOS secara automatik pada konsol pertama
+if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+  exec cage -s -- /opt/smartos/bin/smartos-session
+fi
+EOT
 cp /etc/skel/.bash_profile /home/smart/.bash_profile
 chown smart:smart /home/smart/.bash_profile
 # Servis
@@ -22,7 +29,7 @@ mkdir -p /etc/xdg && echo "[Default Applications]
 application/x-ms-dos-executable=wine.desktop
 application/x-msi=wine.desktop" > /etc/xdg/mimeapps.list
 # Tema boot
-plymouth-set-default-theme smartos
+plymouth-set-default-theme smartos || echo 'AMARAN: tema Plymouth tidak dijumpai'
 update-initramfs -u
 # Branding
 echo "SmartOS" > /etc/issue

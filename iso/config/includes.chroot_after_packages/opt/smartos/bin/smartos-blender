@@ -1,0 +1,8 @@
+#!/bin/sh
+# Membuka Blender dengan SmartOS Bridge. Utamakan versi Flatpak (terkini).
+BRIDGE=/opt/smartos/blender/smartos_bridge.py
+if flatpak info org.blender.Blender >/dev/null 2>&1; then
+  exec flatpak run --share=network --filesystem=/opt/smartos:ro --filesystem=~/.config/smartos:ro \
+    org.blender.Blender --python "$BRIDGE" -- "$@"
+fi
+exec blender --python "$BRIDGE" -- "$@"

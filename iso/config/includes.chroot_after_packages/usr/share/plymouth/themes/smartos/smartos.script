@@ -1,0 +1,43 @@
+Window.SetBackgroundTopColor(0.03, 0.16, 0.20);
+Window.SetBackgroundBottomColor(0.00, 0.03, 0.04);
+W = Window.GetWidth();
+H = Window.GetHeight();
+
+glow.image = Image("glow.png");
+glow.sprite = Sprite(glow.image);
+glow.sprite.SetX(W / 2 - glow.image.GetWidth() / 2);
+glow.sprite.SetY(H * 0.42 - glow.image.GetHeight() / 2);
+glow.sprite.SetZ(1);
+
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetX(W / 2 - logo.image.GetWidth() / 2);
+logo.sprite.SetY(H * 0.42 - logo.image.GetHeight() / 2);
+logo.sprite.SetZ(2);
+
+track.image = Image("track.png");
+track.sprite = Sprite(track.image);
+track.sprite.SetX(W / 2 - track.image.GetWidth() / 2);
+track.sprite.SetY(H * 0.80);
+track.sprite.SetZ(2);
+
+fill.orig = Image("fill.png");
+fill.sprite = Sprite();
+fill.sprite.SetX(W / 2 - track.image.GetWidth() / 2);
+fill.sprite.SetY(H * 0.80);
+fill.sprite.SetZ(3);
+
+t = 0;
+fun refresh() {
+  t++;
+  glow.sprite.SetOpacity(0.65 + 0.35 * Math.Sin(t / 18));
+}
+Plymouth.SetRefreshFunction(refresh);
+
+fun progress_cb(duration, progress) {
+  if (progress > 1) progress = 1;
+  w = Math.Int(track.image.GetWidth() * progress);
+  if (w < 1) w = 1;
+  fill.sprite.SetImage(fill.orig.Scale(w, fill.orig.GetHeight()));
+}
+Plymouth.SetBootProgressFunction(progress_cb);

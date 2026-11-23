@@ -1,7 +1,9 @@
 #!/bin/sh
 set -e
 # Pengguna lalai + autologin pada tty1
-id smart >/dev/null 2>&1 || useradd -m -s /bin/bash -G audio,video,render,input,lpadmin,netdev,plugdev,sudo smart
+G=""
+for g in audio video render input lpadmin netdev plugdev sudo; do getent group "$g" >/dev/null && G="$G,$g"; done
+id smart >/dev/null 2>&1 || useradd -m -s /bin/bash -G "${G#,}" smart
 passwd -d smart || true
 mkdir -p /etc/systemd/system/getty@tty1.service.d
 cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOT

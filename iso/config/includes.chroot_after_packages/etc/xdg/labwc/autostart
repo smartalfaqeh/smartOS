@@ -1,0 +1,6 @@
+#!/bin/sh
+# Dijalankan oleh labwc selepas sesi bermula.
+dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE 2>/dev/null
+/usr/bin/python3 /opt/smartos/service/smartos_service.py > "$HOME/service.log" 2>&1 &
+/opt/smartos/shell/smartos-window.py --view desktop --appid smartos-desktop --intro > "$HOME/desktop.log" 2>&1 &
+( sleep 3; exec waybar -c /opt/smartos/desktop/waybar.json -s /opt/smartos/desktop/waybar.css ) > "$HOME/waybar.log" 2>&1 &

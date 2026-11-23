@@ -4,10 +4,11 @@
 Hanya mendengar pada 127.0.0.1. Semua panggilan /api/* memerlukan token sesi
 (ditulis ke $XDG_RUNTIME_DIR/smartos.token) dan pengepala Host yang sah.
 """
-import os, re, json, time, hmac, socket, hashlib, secrets, shutil, subprocess, urllib.request, urllib.error
+import os, re, json, time, hmac, socket, hashlib, secrets, shutil, subprocess, threading, urllib.request, urllib.error
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+import fileops
 
 PORT = int(os.environ.get("SMARTOS_PORT", 7878))
 ROOT = Path(__file__).resolve().parent.parent
@@ -31,33 +32,56 @@ ALLOWED_PERMS = {"ai", "storage", "printer", "blender", "network"}
 ID_RE = re.compile(r"^[a-z0-9-]{3,60}$")
 MODELS = {"anthropic": "claude-sonnet-5-5", "openai": "gpt-4.1", "deepseek": "deepseek-chat", "ollama": "llama3.2", "mock": "mock"}
 
-LAUNCH = {
-    "firefox": ["firefox-esr"],
-    "writer": ["libreoffice", "--writer"],
-    "calc": ["libreoffice", "--calc"],
-    "impress": ["libreoffice", "--impress"],
-    "blender": ["/opt/smartos/bin/smartos-blender"],
-    "steam": ["sh", "-c", "command -v steam >/dev/null && exec steam || exec flatpak run com.valvesoftware.Steam"],
-    "lutris": ["lutris"],
-    "files": ["pcmanfm"],
-    "terminal": ["foot"],
+BROWSER = "/opt/smartos/bin/smartos-browser"
+WINDOW = "/opt/smartos/shell/smartos-window.py"
+# id: (nama, ikon, jenis, arahan atau nama paparan)
+SYSAPPS = {
+    "chrome": ("Chrome", "🌐", "cmd", [BROWSER]),
+    "docs": ("Google Docs", "📝", "cmd", [BROWSER, "--app=https://docs.google.com/document/"]),
+    "sheets": ("Google Sheets", "📊", "cmd", [BROWSER, "--app=https://docs.google.com/spreadsheets/"]),
+    "slides": ("Google Slides", "📽️", "cmd", [BROWSER, "--app=https://docs.google.com/presentation/"]),
+    "drive": ("Google Drive", "☁️", "cmd", [BROWSER, "--app=https://drive.google.com/"]),
+    "gmail": ("Gmail", "✉️", "cmd", [BROWSER, "--app=https://mail.google.com/"]),
+    "claude": ("Claude", "🤖", "cmd", [BROWSER, "--app=https://claude.ai/"]),
+    "files": ("Fail", "📁", "view", "files"),
+    "terminal": ("Terminal", "⌨️", "cmd", ["foot"]),
+    "blender": ("Blender", "🧊", "cmd", ["/opt/smartos/bin/smartos-blender"]),
+    "media": ("Pemain Media", "🎬", "cmd", ["mpv", "--player-operation-mode=pseudo-gui"]),
+    "steam": ("Steam", "🎮", "cmd", ["sh", "-c", "command -v steam >/dev/null && exec steam || exec flatpak run com.valvesoftware.Steam"]),
+    "winapps": ("App Windows", "🍷", "cmd", ["wine", "winefile"]),
+    "store": ("Smart Store", "🛍️", "view", "store"),
+    "myapps": ("My Smart App", "🧩", "view", "myapps"),
+    "settings": ("Tetapan", "⚙️", "view", "settings"),
 }
-POWER = {"poweroff": ["systemctl", "poweroff"], "reboot": ["systemctl", "reboot"]}
+VIEWS = {"files", "store", "myapps", "settings", "app", "start", "power"}
+ALLOWED_LIBS = {"three", "babylon", "theatre"}
+DEFAULT_PINS = ["sys:chrome", "sys:files", "sys:terminal", "sys:store", "sys:myapps", "sys:claude", "sys:settings"]
+POWER = {"poweroff": ["systemctl", "poweroff"], "reboot": ["systemctl", "reboot"], "logout": ["labwc", "--exit"]}
 
 
 class ApiError(Exception):
-    def __init__(self, code, msg):
+    def __init__(self, code, msg, upstream=None):
         super().__init__(msg)
         self.code = code
+        self.upstream = upstream  # kod HTTP daripada penyedia AI (jika ada)
 
 
 # ---------------------------------------------------------------- konfigurasi
+DEFAULT_CHAIN = ["anthropic", "openai", "deepseek", "ollama"]  # tertib kualiti lalai (terbaik dahulu)
+
+
 def load_conf():
-    c = {"provider": "anthropic", "models": {}, "keys": {}}
+    c = {}
     try:
-        c.update(json.loads((CONF / "config.json").read_text()))
+        c = json.loads((CONF / "config.json").read_text())
     except (OSError, ValueError):
         pass
+    if "chain" not in c:  # naik taraf daripada format lama
+        old_keys, old_models, old_p = c.get("keys", {}), c.get("models", {}), c.get("provider")
+        order = ([old_p] if old_p in MODELS else []) + [x for x in DEFAULT_CHAIN if x != old_p]
+        c["chain"] = [{"provider": x, "model": old_models.get(x, ""), "key": old_keys.get(x, ""),
+                       "enabled": bool(old_keys.get(x)) or x in ("ollama", "mock") and old_p == x} for x in order]
+    c.setdefault("doctor_auto", False)
     return c
 
 
@@ -67,6 +91,9 @@ def save_conf(c):
     os.chmod(p, 0o600)
 
 
+COOLDOWN = {}  # provider -> masa (epoch) sehingga boleh dicuba semula
+
+
 # ---------------------------------------------------------------- enjin AI
 def _post(url, payload, headers, timeout=180):
     req = urllib.request.Request(url, json.dumps(payload).encode(), {"Content-Type": "application/json", **headers})
@@ -74,20 +101,18 @@ def _post(url, payload, headers, timeout=180):
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
-        raise ApiError(502, f"Penyedia AI membalas {e.code}: {e.read().decode(errors='replace')[:300]}")
+        raise ApiError(502, f"Penyedia AI membalas {e.code}: {e.read().decode(errors='replace')[:300]}", upstream=e.code)
     except OSError as e:
         raise ApiError(502, f"Tidak dapat menghubungi penyedia AI: {e}")
 
 
-def llm(messages, system, kind="ask", max_tokens=8000):
-    c = load_conf()
-    prov = c.get("provider", "anthropic")
-    model = c.get("models", {}).get(prov) or MODELS.get(prov, "")
-    key = c.get("keys", {}).get(prov, "")
+def _call_provider(e, messages, system, kind, max_tokens):
+    prov, key = e["provider"], e.get("key", "")
+    model = e.get("model") or MODELS.get(prov, "")
     if prov == "mock":
         return mock_llm(messages, kind)
-    if prov != "ollama" and not key:
-        raise ApiError(400, "Kunci API belum ditetapkan. Buka Tetapan dan masukkan kunci untuk " + prov + ".")
+    if prov == "mockfail" and os.environ.get("SMARTOS_TEST"):
+        raise ApiError(502, "Penyedia AI membalas 429: quota exceeded", upstream=429)
     if prov == "anthropic":
         r = _post("https://api.anthropic.com/v1/messages",
                   {"model": model, "max_tokens": max_tokens, "system": system, "messages": messages},
@@ -105,6 +130,33 @@ def llm(messages, system, kind="ask", max_tokens=8000):
     raise ApiError(400, "Penyedia tidak dikenali: " + str(prov))
 
 
+def llm(messages, system, kind="ask", max_tokens=8000):
+    """Cuba penyedia mengikut keutamaan. Jika kuota habis atau ralat, tukar ke penyedia seterusnya."""
+    c = load_conf()
+    now, errors, tried = time.time(), [], 0
+    for e in c["chain"]:
+        prov = e["provider"]
+        if not e.get("enabled"):
+            continue
+        if prov not in ("ollama", "mock", "mockfail") and not e.get("key"):
+            continue
+        if COOLDOWN.get(prov, 0) > now:
+            errors.append(f"{prov}: rehat sehingga {time.strftime('%H:%M', time.localtime(COOLDOWN[prov]))}")
+            continue
+        tried += 1
+        try:
+            return _call_provider(e, messages, system, kind, max_tokens)
+        except ApiError as x:
+            msg = str(x).lower()
+            quota = x.upstream in (402, 429) or any(w in msg for w in ("quota", "credit", "insufficient", "rate limit", "billing"))
+            auth = x.upstream in (401, 403)
+            COOLDOWN[prov] = now + (3600 if quota else 6 * 3600 if auth else 120)
+            errors.append(f"{prov}: {'kuota habis' if quota else 'kunci ditolak' if auth else str(x)[:120]}")
+    if not tried and not errors:
+        raise ApiError(400, "Tiada penyedia AI diaktifkan. Buka Tetapan → AI dan masukkan sekurang-kurangnya satu kunci API.")
+    raise ApiError(502, "Semua penyedia AI gagal: " + "; ".join(errors))
+
+
 def mock_llm(messages, kind):
     last = messages[-1]["content"]
     if kind == "gen":
@@ -117,6 +169,8 @@ def mock_llm(messages, kind):
                 "$('b').onclick=()=>{n++;$('n').textContent=n;os.storage.set('n',n)};"
                 "</script></body></html>")
         return "===MANIFEST===\n" + json.dumps(manifest, ensure_ascii=False) + "\n===HTML===\n" + html
+    if kind == "doctor":
+        return "[mod mock] Ringkasan: tiada masalah kritikal dalam diagnostik demo.\nMasalah: (tiada)\nCadangan: (tiada)"
     if kind == "bpy":
         return "```python\nimport bpy\nbpy.ops.mesh.primitive_cube_add(size=2)\nprint('Kubus ditambah')\n```"
     return "[mod mock] Anda bertanya: " + last[:200]
@@ -132,6 +186,12 @@ SDK_DOC = """window.os (sudah tersedia, tidak perlu import):
 - await os.printers.print(nama, teks)         [kebenaran: printer]
 - await os.blender.run(skripPython) -> {ok, output, error}  [kebenaran: blender]
 - os.notify(mesej)                            [tiada kebenaran]
+
+Pustaka 3D tempatan (tersedia luar talian). Senaraikan dalam "libs" pada manifest, kemudian guna terus:
+- "three"   -> objek global THREE (three.js r128)
+- "babylon" -> objek global BABYLON (Babylon.js)
+- "theatre" -> objek global Theatre (Theatre.js core, untuk animasi)
+Jangan tulis <script src> sendiri; SmartOS memuatkannya.
 """
 
 SYSTEM_GEN = """Anda ialah enjin 'Make a Software' dalam SmartOS. Bina satu aplikasi berdasarkan permintaan pengguna.
@@ -139,7 +199,7 @@ SYSTEM_GEN = """Anda ialah enjin 'Make a Software' dalam SmartOS. Bina satu apli
 """ + SDK_DOC + """
 Format output MESTI tepat begini, tanpa teks lain:
 ===MANIFEST===
-{"name":"Nama pendek","icon":"satu emoji","description":"satu ayat","permissions":["storage"]}
+{"name":"Nama pendek","icon":"satu emoji","description":"satu ayat","permissions":["storage"],"libs":[]}
 ===HTML===
 <!doctype html>...fail HTML lengkap...
 
@@ -171,7 +231,8 @@ def parse_gen(text):
 def clean_manifest(m, app_id):
     perms = [p for p in m.get("permissions", []) if p in ALLOWED_PERMS]
     return {"id": app_id, "name": str(m.get("name", "App"))[:40] or "App", "icon": str(m.get("icon", "🧩"))[:4],
-            "description": str(m.get("description", ""))[:200], "permissions": sorted(set(perms)), "version": 1}
+            "description": str(m.get("description", ""))[:200], "permissions": sorted(set(perms)), "version": 1,
+            "libs": sorted({l for l in m.get("libs", []) if l in ALLOWED_LIBS})}
 
 
 def validate_html(html):
@@ -179,6 +240,18 @@ def validate_html(html):
         raise ApiError(413, "App terlalu besar (maks 400 KB).")
     if "<html" not in html.lower() and "<body" not in html.lower():
         raise ApiError(502, "App yang dijana bukan HTML yang sah.")
+
+
+RISKY = [(r"\beval\s*\(", "guna eval()"), (r"new\s+Function\s*\(", "guna new Function()"),
+         (r"document\.write\s*\(", "guna document.write()"), (r"<iframe", "membenamkan iframe"),
+         (r"window\.open\s*\(", "membuka tetingkap baharu"), (r"\bfetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon", "cuba membuat permintaan rangkaian"),
+         (r"atob\s*\(", "menyahkod base64 (kadangkala menyembunyikan kod)"), (r"<script[^>]+src\s*=", "memuatkan skrip luar"),
+         (r"location\s*(\.href)?\s*=", "mengubah hala halaman")]
+
+
+def scan_html(html):
+    found = [msg for pat, msg in RISKY if re.search(pat, html, re.I)]
+    return {"level": "tinggi" if len(found) >= 3 else "sederhana" if found else "rendah", "findings": found}
 
 
 def slug(name):
@@ -232,7 +305,7 @@ def gen_app(prompt, draft_id=None):
     m = clean_manifest(manifest, app_id)
     write_app(DRAFTS / app_id, m, html)
     (DRAFTS / app_id / "prompt.json").write_text(json.dumps({"prompt": orig}))
-    return {"draft_id": app_id, "manifest": m}
+    return {"draft_id": app_id, "manifest": m, "scan": scan_html(html)}
 
 
 def install(draft_id):
@@ -287,7 +360,7 @@ def import_app(pkg):
     cm["imported"] = True
     write_app(DRAFTS / app_id, cm, html)
     (DRAFTS / app_id / "prompt.json").write_text(json.dumps({"prompt": "(diimport)"}))
-    return {"draft_id": app_id, "manifest": cm}
+    return {"draft_id": app_id, "manifest": cm, "scan": scan_html(html)}
 
 
 # ---------------------------------------------------------------- peranti & sistem
@@ -308,14 +381,227 @@ def print_text(printer, text):
     return {"ok": True}
 
 
-def launch(name):
-    if name not in LAUNCH:
-        raise ApiError(404, "Aplikasi tidak dikenali")
+FM = fileops.FileManager(HOME)
+INSTALLS = {}  # id Flatpak -> {"state": ..., "msg": ...}
+_fp_cache = {"t": 0, "v": set()}
+
+
+def spawn(cmd):
     try:
-        subprocess.Popen(LAUNCH[name], start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(cmd, start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError as e:
-        raise ApiError(500, f"Tidak dapat memulakan {name}: {e}")
+        raise ApiError(500, f"Tidak dapat memulakan {cmd[0]}: {e}")
     return {"ok": True}
+
+
+def open_view(view, app_id=None):
+    if view not in VIEWS:
+        raise ApiError(400, "Paparan tidak dikenali")
+    cmd = [WINDOW, "--view", view]
+    if view == "app":
+        m = read_app(APPS / check_id(app_id))["manifest"]
+        cmd += ["--id", app_id, "--title", m["name"], "--appid", "smartos-app-" + app_id]
+    return spawn(cmd)
+
+
+def catalog():
+    return json.loads((Path(__file__).parent / "store_catalog.json").read_text())["apps"]
+
+
+def fp_installed():
+    if time.time() - _fp_cache["t"] < 4:
+        return _fp_cache["v"]
+    try:
+        r = subprocess.run(["flatpak", "list", "--app", "--columns=application"], capture_output=True, text=True, timeout=15)
+        v = {l.strip() for l in r.stdout.splitlines() if l.strip()}
+    except (OSError, subprocess.SubprocessError):
+        v = set()
+    _fp_cache.update(t=time.time(), v=v)
+    return v
+
+
+def meta(key):
+    kind, _, ident = key.partition(":")
+    if kind == "sys" and ident in SYSAPPS:
+        n, i = SYSAPPS[ident][0], SYSAPPS[ident][1]
+        return {"key": key, "name": n, "icon": i, "kind": "sys"}
+    if kind == "store":
+        for c in catalog():
+            if c["id"] == ident:
+                return {"key": key, "name": c["name"], "icon": c["icon"], "kind": "store"}
+    if kind == "app":
+        try:
+            m = json.loads((APPS / check_id(ident) / "manifest.json").read_text())
+            return {"key": key, "name": m["name"], "icon": m["icon"], "kind": "app"}
+        except (OSError, ValueError, ApiError):
+            return None
+    return None
+
+
+def launcher():
+    base = [meta("sys:" + k) for k in SYSAPPS]
+    inst = fp_installed()
+    store = [meta("store:" + c["id"]) for c in catalog() if c["id"] in inst]
+    return {"apps": base + store, "myapps": [meta("app:" + a["id"]) for a in list_apps()]}
+
+
+def open_key(key):
+    kind, _, ident = str(key).partition(":")
+    if kind == "sys" and ident in SYSAPPS:
+        _, _, k, v = SYSAPPS[ident]
+        return open_view(v) if k == "view" else spawn(v)
+    if kind == "store" and any(c["id"] == ident for c in catalog()):
+        if ident not in fp_installed():
+            raise ApiError(404, "App belum dipasang. Pasang dari Smart Store.")
+        return spawn(["flatpak", "run", ident])
+    if kind == "app":
+        return open_view("app", ident)
+    raise ApiError(404, "Aplikasi tidak dikenali")
+
+
+def launch(name):  # keserasian ke belakang
+    return open_key("sys:" + str(name))
+
+
+def pins_get():
+    try:
+        keys = json.loads((CONF / "desktop.json").read_text())
+    except (OSError, ValueError):
+        keys = DEFAULT_PINS
+    return [m for m in (meta(k) for k in keys) if m]
+
+
+def pins_set(keys):
+    keys = [k for k in keys if isinstance(k, str) and meta(k)][:60]
+    (CONF / "desktop.json").write_text(json.dumps(keys))
+    return {"ok": True}
+
+
+def store_catalog():
+    inst = fp_installed()
+    return {"flatpak": shutil.which("flatpak") is not None,
+            "apps": [{**c, "installed": c["id"] in inst, "state": INSTALLS.get(c["id"], {}).get("state"),
+                      "msg": INSTALLS.get(c["id"], {}).get("msg", "")} for c in catalog()]}
+
+
+def _install_job(fid):
+    INSTALLS[fid] = {"state": "installing", "msg": ""}
+    try:
+        subprocess.run(["flatpak", "remote-add", "--user", "--if-not-exists", "flathub",
+                        "https://dl.flathub.org/repo/flathub.flatpakrepo"], capture_output=True, timeout=60)
+        r = subprocess.run(["flatpak", "install", "--user", "-y", "--noninteractive", "flathub", fid],
+                           capture_output=True, text=True, timeout=3600)
+        INSTALLS[fid] = {"state": "done" if r.returncode == 0 else "error", "msg": (r.stderr or r.stdout)[-300:] if r.returncode else ""}
+    except (OSError, subprocess.SubprocessError) as e:
+        INSTALLS[fid] = {"state": "error", "msg": str(e)}
+    _fp_cache["t"] = 0
+
+
+def store_install(fid):
+    if not any(c["id"] == fid for c in catalog()):
+        raise ApiError(404, "App tidak dalam katalog Smart Store")
+    if not shutil.which("flatpak"):
+        raise ApiError(503, "Flatpak tidak dipasang pada sistem ini")
+    if INSTALLS.get(fid, {}).get("state") == "installing":
+        return {"ok": True}
+    threading.Thread(target=_install_job, args=(fid,), daemon=True).start()
+    return {"ok": True}
+
+
+def store_remove(fid):
+    if not any(c["id"] == fid for c in catalog()):
+        raise ApiError(404, "App tidak dalam katalog Smart Store")
+    r = subprocess.run(["flatpak", "uninstall", "--user", "-y", "--noninteractive", fid], capture_output=True, text=True, timeout=300)
+    _fp_cache["t"] = 0
+    INSTALLS.pop(fid, None)
+    if r.returncode:
+        raise ApiError(500, (r.stderr or r.stdout)[-200:])
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------- keselamatan & Doktor
+SECRET_RE = re.compile(r"(sk-[A-Za-z0-9_-]{10,}|[Bb]earer\s+[A-Za-z0-9._~+/-]{10,}|[A-Za-z0-9_-]{32,})")
+
+
+def sanitize(t):
+    return SECRET_RE.sub("[DISEMBUNYI]", t)
+
+
+def _sh(cmd, n=4000, timeout=15):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        return (r.stdout + r.stderr)[-n:]
+    except (OSError, subprocess.SubprocessError) as e:
+        return f"(gagal: {e})"
+
+
+def collect_diag():
+    parts = {"journal (amaran ke atas)": _sh(["journalctl", "-b", "-p", "warning", "--no-pager", "-n", "120"], 6000),
+             "perkhidmatan gagal": _sh(["systemctl", "--failed", "--no-pager"], 1500),
+             "memori": _sh(["free", "-m"], 600), "cakera": _sh(["df", "-h", "/", str(HOME)], 800),
+             "beban": _sh(["uptime"], 200)}
+    for name in ("service", "labwc", "waybar", "desktop", "cage", "shell"):
+        f = HOME / (name + ".log")
+        if f.exists():
+            parts["log " + name] = f.read_text(errors="replace")[-2500:]
+    return sanitize("\n\n".join(f"### {k}\n{v}" for k, v in parts.items()))
+
+
+SYSTEM_DOCTOR = ("Anda ialah Doktor SmartOS, ejen yang mencari bug dan masalah prestasi pada sistem SmartOS (Debian, labwc, waybar, "
+                 "servis Python, shell WebKit). Berdasarkan diagnostik, hasilkan laporan ringkas dalam bahasa Melayu: 1) Ringkasan keadaan, "
+                 "2) Masalah yang ditemui mengikut keutamaan (tinggi/sederhana/rendah) dengan bukti daripada log, 3) Cadangan pembaikan "
+                 "(arahan atau perubahan fail), 4) Perkara yang tidak dapat disimpulkan. Jangan reka maklumat yang tiada dalam log. "
+                 "Anda hanya mencadangkan; pengguna yang memutuskan sama ada mahu melaksanakan.")
+
+
+def doctor_run():
+    diag = collect_diag()
+    report = llm([{"role": "user", "content": "Diagnostik sistem:\n\n" + diag}], SYSTEM_DOCTOR, kind="doctor", max_tokens=3000)
+    rec = {"ts": int(time.time()), "report": report}
+    (DATA / "doctor-last.json").write_text(json.dumps(rec, ensure_ascii=False))
+    return rec
+
+
+def doctor_last():
+    try:
+        return json.loads((DATA / "doctor-last.json").read_text())
+    except (OSError, ValueError):
+        return {"ts": None, "report": ""}
+
+
+def _doctor_loop():
+    while True:
+        time.sleep(3600)
+        try:
+            if load_conf().get("doctor_auto") and time.time() - (doctor_last().get("ts") or 0) > 86400:
+                doctor_run()
+        except Exception:
+            pass
+
+
+def security_status():
+    def active(u):
+        return _sh(["systemctl", "is-active", u], 50, 5).strip() == "active"
+    db = [f for f in Path("/var/lib/clamav").glob("*.c[vl]d")] if Path("/var/lib/clamav").is_dir() else []
+    aa = Path("/sys/module/apparmor/parameters/enabled")
+    upd = Path("/var/lib/smartos/last-update")
+    return {"firewall": active("nftables"), "apparmor": aa.exists() and aa.read_text().strip() == "Y",
+            "clamav_installed": shutil.which("clamscan") is not None,
+            "clamav_db": max((f.stat().st_mtime for f in db), default=None),
+            "auto_updates": active("smartos-update.timer"),
+            "last_update": upd.read_text().strip() if upd.exists() else None}
+
+
+def security_scan(path):
+    if not shutil.which("clamscan"):
+        raise ApiError(503, "ClamAV tidak dipasang pada sistem ini")
+    if not any(Path("/var/lib/clamav").glob("*.c[vl]d")):
+        raise ApiError(503, "Pangkalan data virus belum dimuat turun. Sambung ke internet dan tunggu kemas kini automatik (beberapa minit selepas boot).")
+    target = FM.safe(path)
+    r = subprocess.run(["clamscan", "-r", "--infected", "--no-summary", "--max-filesize=100M", "--max-scansize=300M", str(target)],
+                       capture_output=True, text=True, timeout=1800)
+    infected = [l for l in r.stdout.splitlines() if l.endswith("FOUND")]
+    return {"clean": r.returncode == 0, "infected": infected, "error": r.stderr[-300:] if r.returncode == 2 else ""}
 
 
 def blender_run(script):
@@ -367,55 +653,88 @@ def app_data(app_id, key=None, value=None, write=False):
 
 
 # ---------------------------------------------------------------- penghala
+def config_public():
+    c, now = load_conf(), time.time()
+    return {"chain": [{"provider": e["provider"], "model": e.get("model", ""), "default_model": MODELS.get(e["provider"], ""),
+                       "enabled": bool(e.get("enabled")), "has_key": bool(e.get("key")),
+                       "cooldown_until": COOLDOWN.get(e["provider"], 0) if COOLDOWN.get(e["provider"], 0) > now else None}
+                      for e in c["chain"]],
+            "doctor_auto": bool(c.get("doctor_auto"))}
+
+
+def config_set(b):
+    c = load_conf()
+    old = {e["provider"]: e for e in c["chain"]}
+    chain = []
+    for e in b.get("chain", []):
+        prov = e.get("provider")
+        if prov not in MODELS and not (prov == "mockfail" and os.environ.get("SMARTOS_TEST")):
+            raise ApiError(400, "Penyedia tidak sah: " + str(prov))
+        key = str(e.get("key") or "").strip() or old.get(prov, {}).get("key", "")
+        chain.append({"provider": prov, "model": str(e.get("model", ""))[:80], "key": key, "enabled": bool(e.get("enabled"))})
+        COOLDOWN.pop(prov, None)
+    if chain:
+        c["chain"] = chain
+    if "doctor_auto" in b:
+        c["doctor_auto"] = bool(b["doctor_auto"])
+    save_conf(c)
+    return {"ok": True}
+
+
+def fm_route(m, op, q, b):
+    g = lambda k, d="": (q.get(k) or [d])[0]
+    if op == "places": return {"places": FM.places()}
+    if op == "list": return FM.list(g("path", str(HOME)), g("hidden") == "1")
+    if op == "mkdir": return FM.mkdir(b.get("parent"), b.get("name"))
+    if op == "newfile": return FM.newfile(b.get("parent"), b.get("name"))
+    if op == "rename": return FM.rename(b.get("path"), b.get("name"))
+    if op == "paste": return FM.paste(b.get("paths", []), b.get("dest"), b.get("mode"))
+    if op == "delete": return FM.delete(b.get("paths", []))
+    if op == "restore": return FM.restore(b.get("names", []))
+    if op == "empty-trash": return FM.empty_trash()
+    if op == "undo": return FM.undo()
+    if op == "redo": return FM.redo()
+    if op == "open": return FM.open(b.get("path"), b.get("app"))
+    raise ApiError(404, "Operasi fail tidak dikenali")
+
+
 def dispatch(m, path, q, b):
     seg = path.strip("/").split("/")
     r = (m, seg[0], seg[1] if len(seg) > 1 else "")
-    if r == ("GET", "config", ""):
-        c = load_conf(); p = c["provider"]
-        return {"provider": p, "model": c["models"].get(p, MODELS.get(p, "")), "has_key": bool(c["keys"].get(p)), "providers": list(MODELS)}
-    if r == ("POST", "config", ""):
-        c = load_conf(); p = b.get("provider", c["provider"])
-        if p not in MODELS:
-            raise ApiError(400, "Penyedia tidak sah")
-        c["provider"] = p
-        if b.get("model"): c["models"][p] = str(b["model"])[:80]
-        if b.get("key"): c["keys"][p] = str(b["key"]).strip()
-        save_conf(c)
-        return {"ok": True}
-    if r == ("GET", "system", ""):
-        return system_info()
-    if r == ("GET", "apps", ""):
-        return {"apps": list_apps()}
-    if r == ("POST", "apps", "generate"):
-        return gen_app(b.get("prompt"), b.get("draft_id"))
-    if r == ("POST", "apps", "install"):
-        return install(b.get("draft_id"))
-    if r == ("POST", "apps", "uninstall"):
-        return uninstall(b.get("id"))
-    if r == ("POST", "apps", "import"):
-        return import_app(b.get("package"))
+    if r == ("GET", "config", ""): return config_public()
+    if r == ("POST", "config", ""): return config_set(b)
+    if r == ("GET", "system", ""): return {**system_info(), "security": security_status()}
+    if r == ("GET", "launcher", ""): return launcher()
+    if r == ("GET", "desktop", ""): return {"pins": pins_get()}
+    if r == ("POST", "desktop", ""): return pins_set(b.get("keys", []))
+    if r == ("POST", "open", ""): return open_key(b.get("key"))
+    if r == ("GET", "store", "catalog"): return store_catalog()
+    if r == ("POST", "store", "install"): return store_install(b.get("id"))
+    if r == ("POST", "store", "remove"): return store_remove(b.get("id"))
+    if r == ("POST", "doctor", "run"): return doctor_run()
+    if r == ("GET", "doctor", "last"): return doctor_last()
+    if r == ("GET", "security", "status"): return security_status()
+    if r == ("POST", "security", "scan"): return security_scan(b.get("path", str(HOME)))
+    if seg[0] == "fm" and len(seg) == 2: return fm_route(m, seg[1], q, b)
+    if r == ("GET", "apps", ""): return {"apps": list_apps()}
+    if r == ("POST", "apps", "generate"): return gen_app(b.get("prompt"), b.get("draft_id"))
+    if r == ("POST", "apps", "install"): return install(b.get("draft_id"))
+    if r == ("POST", "apps", "uninstall"): return uninstall(b.get("id"))
+    if r == ("POST", "apps", "import"): return import_app(b.get("package"))
     if m == "GET" and seg[0] == "apps" and len(seg) == 3 and seg[1] == "draft":
-        return read_app(DRAFTS / check_id(seg[2]))
-    if m == "GET" and seg[0] == "apps" and len(seg) == 2:
-        return read_app(APPS / check_id(seg[1]))
-    if m == "POST" and seg[0] == "apps" and len(seg) == 3 and seg[2] == "export":
-        return export_app(seg[1])
+        return {**read_app(DRAFTS / check_id(seg[2])), "scan": scan_html(read_app(DRAFTS / seg[2])["html"])}
+    if m == "GET" and seg[0] == "apps" and len(seg) == 2: return read_app(APPS / check_id(seg[1]))
+    if m == "POST" and seg[0] == "apps" and len(seg) == 3 and seg[2] == "export": return export_app(seg[1])
     if seg[0] == "data" and len(seg) == 2:
-        if m == "GET":
-            return app_data(seg[1], (q.get("key") or [""])[0])
+        if m == "GET": return app_data(seg[1], (q.get("key") or [""])[0])
         return app_data(seg[1], b.get("key", ""), b.get("value"), write=True)
     if r == ("POST", "ai", "ask"):
         return {"text": llm([{"role": "user", "content": str(b.get("prompt", ""))[:8000]}], SYSTEM_ASK)}
-    if r == ("GET", "printers", ""):
-        return {"printers": printers()}
-    if r == ("POST", "print", ""):
-        return print_text(b.get("printer"), b.get("text", ""))
-    if r == ("POST", "launch", ""):
-        return launch(b.get("name"))
-    if r == ("POST", "blender", ""):
-        return blender_run(str(b.get("script", ""))[:200_000])
-    if r == ("POST", "blender", "ask"):
-        return blender_ask(b.get("prompt", ""))
+    if r == ("GET", "printers", ""): return {"printers": printers()}
+    if r == ("POST", "print", ""): return print_text(b.get("printer"), b.get("text", ""))
+    if r == ("POST", "launch", ""): return launch(b.get("name"))
+    if r == ("POST", "blender", ""): return blender_run(str(b.get("script", ""))[:200_000])
+    if r == ("POST", "blender", "ask"): return blender_ask(b.get("prompt", ""))
     if r == ("POST", "power", ""):
         if b.get("action") not in POWER:
             raise ApiError(400, "Tindakan tidak sah")
@@ -424,7 +743,7 @@ def dispatch(m, path, q, b):
     raise ApiError(404, "Laluan tidak dijumpai")
 
 
-CTYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript", ".png": "image/png", ".css": "text/css"}
+CTYPES = {".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".png": "image/png", ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json"}
 
 
 class H(BaseHTTPRequestHandler):
@@ -439,6 +758,8 @@ class H(BaseHTTPRequestHandler):
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
@@ -446,7 +767,7 @@ class H(BaseHTTPRequestHandler):
 
     def static(self, p):
         f = (ROOT / p.lstrip("/")).resolve()
-        if not (f.is_file() and ((ROOT / "shell") in f.parents or f.parent == ROOT / "sdk")):
+        if not (f.is_file() and ((ROOT / "shell") in f.parents or (ROOT / "sdk") in f.parents)):
             return self._send(404, {"error": "tiada"})
         self._send(200, raw=f.read_bytes(), ctype=CTYPES.get(f.suffix, "application/octet-stream"))
 
@@ -471,7 +792,7 @@ class H(BaseHTTPRequestHandler):
                     return self._send(413, {"error": "terlalu besar"})
                 body = json.loads(self.rfile.read(n) or b"{}")
             self._send(200, dispatch(m, p[5:], parse_qs(u.query), body))
-        except ApiError as e:
+        except (ApiError, fileops.FMError) as e:
             self._send(e.code, {"error": str(e)})
         except (FileNotFoundError, ValueError):
             self._send(404, {"error": "tidak dijumpai atau data tidak sah"})
@@ -486,6 +807,7 @@ class H(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    threading.Thread(target=_doctor_loop, daemon=True).start()
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     print(f"SmartOS Service pada 127.0.0.1:{PORT}", flush=True)
     srv.serve_forever()

@@ -2,29 +2,41 @@ Window.SetBackgroundTopColor(0.03, 0.16, 0.20);
 Window.SetBackgroundBottomColor(0.00, 0.03, 0.04);
 W = Window.GetWidth();
 H = Window.GetHeight();
+CX = W / 2;
+LOGO_Y = H * 0.40;
+
+logo.image = Image("logo.png");
+LH = logo.image.GetHeight();
+name.image = Image("name.png");
+track.image = Image("track.png");
+NAME_Y = LOGO_Y + LH / 2 + 14;
+BAR_Y = NAME_Y + name.image.GetHeight() + 26;
 
 glow.image = Image("glow.png");
 glow.sprite = Sprite(glow.image);
-glow.sprite.SetX(W / 2 - glow.image.GetWidth() / 2);
-glow.sprite.SetY(H * 0.42 - glow.image.GetHeight() / 2);
+glow.sprite.SetX(CX - glow.image.GetWidth() / 2);
+glow.sprite.SetY(LOGO_Y - glow.image.GetHeight() / 2);
 glow.sprite.SetZ(1);
 
-logo.image = Image("logo.png");
 logo.sprite = Sprite(logo.image);
-logo.sprite.SetX(W / 2 - logo.image.GetWidth() / 2);
-logo.sprite.SetY(H * 0.42 - logo.image.GetHeight() / 2);
+logo.sprite.SetX(CX - logo.image.GetWidth() / 2);
+logo.sprite.SetY(LOGO_Y - LH / 2);
 logo.sprite.SetZ(2);
 
-track.image = Image("track.png");
+name.sprite = Sprite(name.image);
+name.sprite.SetX(CX - name.image.GetWidth() / 2);
+name.sprite.SetY(NAME_Y);
+name.sprite.SetZ(2);
+
 track.sprite = Sprite(track.image);
-track.sprite.SetX(W / 2 - track.image.GetWidth() / 2);
-track.sprite.SetY(H * 0.80);
+track.sprite.SetX(CX - track.image.GetWidth() / 2);
+track.sprite.SetY(BAR_Y);
 track.sprite.SetZ(2);
 
 fill.orig = Image("fill.png");
 fill.sprite = Sprite();
-fill.sprite.SetX(W / 2 - track.image.GetWidth() / 2);
-fill.sprite.SetY(H * 0.80);
+fill.sprite.SetX(CX - track.image.GetWidth() / 2);
+fill.sprite.SetY(BAR_Y);
 fill.sprite.SetZ(3);
 
 t = 0;

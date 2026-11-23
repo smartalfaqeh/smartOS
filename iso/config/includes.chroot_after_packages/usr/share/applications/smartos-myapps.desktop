@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=My Smart App
+Icon=smartos
+StartupWMClass=smartos-myapps
+NoDisplay=true
+Exec=/opt/smartos/shell/smartos-window.py --view myapps

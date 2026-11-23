@@ -16,7 +16,8 @@ if [ -d $C/includes.chroot ]; then
 fi
 # muat naik melalui web membuang bit "boleh laku", jadi tetapkan semula
 chmod +x iso/auto/config $C/hooks/live/* 2>/dev/null || true
-chmod +x $C/includes.chroot_after_packages/opt/smartos/bin/* \
+chmod +x $C/includes.chroot_after_packages/etc/xdg/labwc/autostart \
+         $C/includes.chroot_after_packages/opt/smartos/bin/* \
          $C/includes.chroot_after_packages/opt/smartos/service/*.py \
          $C/includes.chroot_after_packages/opt/smartos/shell/*.py 2>/dev/null || true
 

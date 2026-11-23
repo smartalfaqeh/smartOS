@@ -1,0 +1,9 @@
+#!/bin/sh
+# Pelayar: Google Chrome (jika dipasang), jika tidak Chromium. Tambah --app=URL untuk tetingkap aplikasi web.
+if command -v google-chrome-stable >/dev/null 2>&1; then B=google-chrome-stable
+elif flatpak info com.google.Chrome >/dev/null 2>&1; then exec flatpak run com.google.Chrome --ozone-platform-hint=auto "$@"
+else B=chromium; fi
+FLAGS="--ozone-platform-hint=auto --enable-features=WaylandWindowDecorations"
+# tanpa GPU sebenar (contoh VM): guna perisian supaya tidak hitam/lambat
+[ -e /dev/dri/renderD128 ] || FLAGS="$FLAGS --disable-gpu"
+exec "$B" $FLAGS "$@"

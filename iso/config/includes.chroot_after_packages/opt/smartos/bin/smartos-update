@@ -1,14 +1,19 @@
 #!/bin/sh
-# Kemas kini automatik: Blender (Flatpak, kemudian apt) dan semua Flatpak lain.
+# Kemas kini automatik (root, melalui smartos-update.timer): Blender/Flatpak, pangkalan data virus, pakej keselamatan.
 D=/var/lib/smartos; mkdir -p "$D"
+AVAIL=$(df -BM --output=avail /var 2>/dev/null | tail -1 | tr -dc 0-9); AVAIL=${AVAIL:-0}
 {
-  echo "== $(date -Is) =="
+  echo "== $(date -Is) (ruang bebas: ${AVAIL} MB) =="
   if command -v flatpak >/dev/null 2>&1; then
-    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-    flatpak info org.blender.Blender >/dev/null 2>&1 || flatpak install -y --noninteractive flathub org.blender.Blender
+    flatpak remote-add --system --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+    # pemasangan besar hanya jika ruang mencukupi (mod live tanpa persistence menggunakan RAM)
+    if [ "$AVAIL" -ge 6000 ]; then
+      flatpak info org.blender.Blender >/dev/null 2>&1 || flatpak install -y --noninteractive flathub org.blender.Blender
+      command -v freshclam >/dev/null 2>&1 && freshclam --quiet
+    else echo "Ruang terhad: langkau pemasangan Blender Flatpak dan pangkalan data virus."; fi
     flatpak update -y --noninteractive
   fi
-  apt-get update -qq && apt-get install -y -qq --only-upgrade blender
+  apt-get update -qq && apt-get install -y -qq --only-upgrade blender chromium firefox-esr
   date -Is > "$D/last-update"
 } >> "$D/update.log" 2>&1
 exit 0

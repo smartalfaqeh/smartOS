@@ -11,11 +11,13 @@ pkexec
 network-manager
 ca-certificates
 curl
-# --- paparan (Wayland kiosk) ---
-cage
+git
+# --- desktop (labwc + waybar) ---
+labwc
+waybar
 xwayland
 foot
-pcmanfm
+adwaita-icon-theme
 mesa-vulkan-drivers
 libgl1-mesa-dri
 mesa-utils
@@ -45,7 +47,7 @@ wireplumber
 bluez
 udisks2
 gvfs
-# --- cetakan & pengimbas tanpa pemacu ---
+# --- cetakan dan pengimbas tanpa pemacu ---
 cups
 cups-client
 cups-filters
@@ -56,18 +58,31 @@ hplip
 printer-driver-all
 printer-driver-gutenprint
 printer-driver-brlaser
-# --- aplikasi asas ---
+# --- pelayar dan media (alat pejabat: Google Docs/Sheets/Slides melalui pelayar) ---
+chromium
 firefox-esr
-libreoffice-writer
-libreoffice-calc
-libreoffice-impress
-libreoffice-gtk3
+mpv
+ffmpeg
+# --- 3D dan kreatif ---
 blender
-# --- permainan & keserasian Windows ---
+# --- keserasian Windows dan Flatpak (Smart Store) ---
 wine
-winetricks
-lutris
 flatpak
 xdg-desktop-portal-gtk
-# --- sandbox ---
+# --- alat pembangun (Claude Code dan Codex memerlukan Node.js) ---
+nodejs
+npm
+# --- keselamatan ---
+nftables
+apparmor
+apparmor-utils
+unattended-upgrades
+clamav
 bubblewrap
+# --- prestasi dan haba ---
+zram-tools
+earlyoom
+power-profiles-daemon
+thermald
+irqbalance
+gamemode

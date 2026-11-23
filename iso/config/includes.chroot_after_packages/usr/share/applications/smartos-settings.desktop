@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Tetapan
+Icon=smartos
+StartupWMClass=smartos-settings
+NoDisplay=true
+Exec=/opt/smartos/shell/smartos-window.py --view settings

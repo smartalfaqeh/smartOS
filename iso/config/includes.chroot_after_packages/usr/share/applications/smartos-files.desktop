@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Fail
+Icon=smartos
+StartupWMClass=smartos-files
+NoDisplay=true
+Exec=/opt/smartos/shell/smartos-window.py --view files

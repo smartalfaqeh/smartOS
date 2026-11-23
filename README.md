@@ -1,67 +1,60 @@
-# SmartOS – kit pembinaan (prototaip v0.1)
+# SmartOS: kit pembinaan (prototaip v0.2)
 
-OS berasaskan Debian 13 (trixie) dengan enjin AI, "Make a Software", Blender bersambung automatik,
-Wine/Proton untuk app Windows, dan kemas kini automatik. Kit ini menghasilkan fail ISO live.
+OS berasaskan Debian 13 (trixie): desktop labwc + taskbar waybar, shell web SmartOS, enjin AI berantai,
+My Smart App (Make a Software), Smart Store, pengurus fail, Doktor SmartOS, Blender bersambung, keselamatan berlapis.
 
 ## Bina ISO
-Pilihan A, mesin Debian 12/13 (atau VM):  `sudo ./build.sh`
-Pilihan B, Docker pada Linux lain: `docker run --rm --privileged -v "$PWD":/work -w /work debian:trixie ./build.sh`
+- Awan (disyorkan): muat naik SEMUA kandungan kit ke repositori GitHub (termasuk `.github/workflows/build-iso.yml`),
+  tab Actions → "Bina ISO SmartOS" → Run workflow. ISO dipecah dan diterbitkan di tab Releases.
+- Mesin sendiri: `sudo ./build.sh` pada Debian 13, atau
+  `docker run --rm --privileged -v "$PWD":/work -w /work debian:trixie bash ./build.sh`
+- USB portable dengan persistence (Linux): `sudo ./make-usb.sh smartos.iso /dev/sdX`.
+- VM: VirtualBox, 4 GB RAM, EFI, VMSVGA 128 MB + 3D acceleration, lampirkan ISO.
 
-Perlu ~15 GB ruang kosong, internet, dan 20 hingga 60 minit. Hasilnya `smartos.iso`.
-Log ada dalam `build.log`. Jika build gagal, hantar log itu untuk dibaiki.
+## Aliran boot
+GRUB → skrin Plymouth (logo + nama SmartOS, dikekalkan) → desktop dengan intro 3D logo + api turquoise
+(dilangkau automatik jika WebGL tidak tersedia) → taskbar muncul. Tiada skrin log masuk teks.
 
-## Bina di awan (GitHub Actions, tanpa memasang apa-apa)
-1. Cipta akaun GitHub dan repositori baharu (public disyorkan).
-2. Muat naik SEMUA kandungan kit ke repositori, termasuk folder tersembunyi `.github/workflows/build-iso.yml`
-   (jika muat naik melalui pelayar tidak membawanya, guna "Add file → Create new file", taip laluan
-   `.github/workflows/build-iso.yml` dan tampal kandungan fail itu).
-3. Tab Actions → "Bina ISO SmartOS" → Run workflow. Tunggu 40 hingga 90 minit.
-4. Tab Releases: muat turun semua `smartos.iso.part-*` dan `smartos.iso.sha256`, gabungkan (arahan ada pada halaman Release).
-Jika gagal, muat turun artifak `build-log` daripada larian itu. ISO dipecah kerana had 2 GB sefail pada Release.
+## Desktop
+- Taskbar bawah: butang logo (menu mula), senarai tetingkap (klik = kecil/besar, klik tengah = tutup), bunyi, rangkaian, bateri, jam, kuasa.
+- Desktop depan: hanya pintasan (boleh skrol). Menu mula: app Smart Store yang dipasang + butang My Smart App.
+- My Smart App: app yang anda cipta (Make a Software). Klik "Pin ke desktop" untuk letak pintasan di desktop depan.
+- Pintasan: Super+Ruang menu mula, Super+E Fail, Super+D tunjuk desktop, Alt+Tab tukar tetingkap, Ctrl+Alt+T Terminal.
+- Alat pejabat: Google Docs/Sheets/Slides/Drive/Gmail dan Claude dibuka sebagai tetingkap aplikasi web (Chromium/Chrome).
 
-## Uji
-`./test-in-vm.sh smartos.iso` (QEMU), atau buka ISO dalam VirtualBox/VMware (4 GB RAM, EFI, 3D acceleration).
-Jika sistem boot, anda akan nampak skrin boot Plymouth dengan logo, kemudian shell SmartOS.
+## Enjin AI (Tetapan → AI)
+Senarai penyedia berkeutamaan (Anthropic, OpenAI, DeepSeek, Ollama). Susun mengikut kualiti; jika kuota habis atau ralat
+SmartOS bertukar ke penyedia seterusnya dan merehatkan yang gagal (1 jam jika kuota, 6 jam jika kunci ditolak).
+Kunci disimpan di `~/.config/smartos/config.json` (mod 600) dan tidak pernah dihantar kembali ke antara muka.
 
-## USB portable (boleh dibawa ke komputer lain)
-Cara paling mudah (Linux): `sudo ./make-usb.sh smartos.iso /dev/sdX` (cari sdX dengan `lsblk`; skrip menolak cakera bukan USB
-dan cakera sistem). Ia menulis ISO dan mencipta partition `persistence` supaya tetapan, kunci API dan app yang dicipta kekal.
-Windows/Mac: guna Rufus (mod "DD Image") atau balenaEtcher. Itu cuma menghasilkan USB live tanpa persistence.
-Keperluan: USB 3.0, sekurang-kurangnya 16 GB. Pada komputer dengan Secure Boot, matikan Secure Boot dalam BIOS
-(imej ini tidak ditandatangani). Kunci API disimpan tanpa penyulitan pada USB: jangan hilangkan USB anda.
+## Terminal
+`foot`. Taip `install-claude-code` atau `install-codex` (memerlukan Node.js, sudah disertakan), `smartos-help` untuk bantuan.
 
-## Mula guna
-1. Tetapan (ikon gear) → pilih penyedia (anthropic / openai / deepseek / ollama), masukkan kunci API.
-   Pilih `mock` untuk mencuba aliran tanpa kunci (app demo sahaja).
-2. "Cipta app" → taip apa yang anda mahu → pratonton → ubah → Pasang.
-3. Bar atas: butang AI/Blender. Dalam mod Blender, arahan anda dijadikan skrip bpy dan dijalankan dalam Blender
-   (Blender mesti dibuka melalui SmartOS).
+## Pustaka 3D untuk app yang dijana
+Tersedia luar talian: `three` (r128), `babylon`, `theatre`. Senaraikan dalam "libs" pada manifest; SmartOS memuatkannya ke dalam sandbox.
+Untuk kuasa penuh: Blender + AI (butang AI/Blender pada desktop, atau API `os.blender.run`).
 
-## Struktur
-- `iso/` konfigurasi live-build (pakej, hook, fail yang disalin ke OS)
-- `opt/smartos/service/smartos_service.py` enjin AI, pengurus app, peranti, jambatan Blender
-- `opt/smartos/shell/` antara muka desktop (HTML) dan tetingkap WebKitGTK
-- `opt/smartos/sdk/smartos-sdk.js` API `window.os` untuk app yang dijana
-- `opt/smartos/blender/smartos_bridge.py` add-on jambatan Blender
-- `opt/smartos/bin/smartos-update` + `smartos-update.timer` kemas kini automatik harian
-- `usr/share/plymouth/themes/smartos/` skrin boot
-- `tests/selftest.py` ujian servis (`python3 tests/selftest.py`)
+## Keselamatan (berlapis, bukan jaminan mutlak)
+Tembok api nftables (tolak semua sambungan masuk), AppArmor, sysctl yang diperketat, root dikunci, tiada sshd, kemas kini keselamatan automatik,
+Flatpak sandbox untuk Smart Store (hanya ID dalam katalog), app dijana AI dalam iframe sandbox + CSP tanpa rangkaian + kebenaran per-app + imbasan kod,
+pengurus fail terhad kepada rumah/media, imbasan virus ClamAV atas permintaan, servis hanya di 127.0.0.1 dengan token sesi.
+Tidak ada: penyulitan cakera, Secure Boot ditandatangani, tandatangan kriptografi pengarang untuk .smartapp (hanya sha256).
 
-## Keselamatan (ringkas)
-- App dijana berjalan dalam iframe sandbox tanpa akses langsung ke servis; semua panggilan melalui shell yang menyemak
-  kebenaran. Rangkaian ditutup melalui CSP melainkan kebenaran "Internet" diberi.
-- Servis hanya di 127.0.0.1, memerlukan token sesi dan menyemak Host.
-- Kebenaran "Blender" membolehkan app menjalankan skrip Python dalam Blender dengan hak pengguna. Beri hanya pada app yang dipercayai.
-- Pakej `.smartapp` hanya ditandatangani dengan sha256 (semak integriti), BUKAN tandatangan kriptografi pengarang.
-  Tambah tandatangan kunci awam sebelum membuka repositori kongsi awam.
+## Doktor SmartOS
+Tetapan → Doktor: mengumpul log (kunci/token disembunyikan), meminta AI menganalisis dan menghasilkan laporan + cadangan pembaikan.
+Ia hanya mencadangkan. Pilihan jalankan sekali sehari menggunakan kuota AI anda.
+
+## Ujian
+`python3 tests/selftest.py` (66 ujian servis dan konfigurasi), `npm install jsdom && node tests/ui_test.js` (27 ujian UI).
 
 ## Status jujur
-Telah diuji (sandbox, tanpa ISO): servis + 24 ujian automatik, jambatan Blender dengan bpy tiruan, sintaks semua skrip.
-BELUM diuji: `lb build` sebenar, boot ISO, Plymouth, WebKitGTK shell di bawah cage, Wine/Steam, Blender sebenar,
-panggilan ke API AI sebenar. Jangkakan beberapa pembaikan pada percubaan pertama.
+Diuji di sandbox: servis, pengurus fail (undo/redo/keselamatan laluan), rantaian AI, Store (tanpa Flatpak sebenar), semua paparan UI dalam jsdom,
+sintaks semua konfigurasi. BELUM diuji pada perkakasan/VM: labwc, waybar, gtk-layer-shell, taskbar, menu mula overlay, intro 3D (WebGL),
+boot senyap + plymouth retain-splash, Chromium/Chrome, Flatpak install, ClamAV, zram/thermald, panggilan API AI sebenar.
+Jangkakan beberapa pusingan pembaikan selepas ujian pertama. Sesi sandaran: jika labwc gagal, cage (kiosk) dimulakan; log di ~/*.log.
 
 ## Had diketahui
-- ISO ialah mod live: perubahan hilang selepas reboot. Pemasang (Calamares) belum disertakan.
-- `cage` memaparkan satu app skrin penuh pada satu masa (mod kiosk). Untuk berbilang tetingkap, tukar kepada labwc/sway.
-- Steam dipasang melalui Flatpak/pakej pada percubaan pertama; permainan dengan anti-cheat kernel tidak akan berjalan.
-- Pemacu NVIDIA proprietari tidak disertakan (guna nouveau). Tambah pada senarai pakej jika perlu.
+- Mod live: perubahan hilang selepas reboot tanpa persistence; pemasangan besar (Blender Flatpak, DB virus) dilangkau jika ruang kurang 6 GB.
+- Tiada pemasang (Calamares) lagi.
+- "Chrome" lalai ialah Chromium; Google Chrome sebenar dipasang melalui Smart Store.
+- Prestasi: zram, earlyoom, thermald, power-profiles-daemon dan desktop ringan membantu, tetapi tidak boleh dijanjikan "tanpa lag dan tanpa panas" pada semua perkakasan.

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Smart Store
+Icon=smartos
+StartupWMClass=smartos-store
+NoDisplay=true
+Exec=/opt/smartos/shell/smartos-window.py --view store

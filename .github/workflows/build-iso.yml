@@ -1,4 +1,4 @@
-name: Bina ISO SmartOS
+name: Bina ISO FaqehOS
 
 on:
   workflow_dispatch:      # tekan "Run workflow" secara manual
@@ -26,10 +26,10 @@ jobs:
 
       - name: Checksum dan pecah (had Release 2 GB sefail)
         run: |
-          ls -lh smartos*.iso
-          sha256sum smartos.iso > smartos.iso.sha256
-          split -b 1900M -d smartos.iso smartos.iso.part-
-          ls -lh smartos.iso.part-*
+          ls -lh faqehos*.iso
+          sha256sum faqehos.iso > faqehos.iso.sha256
+          split -b 1900M -d faqehos.iso faqehos.iso.part-
+          ls -lh faqehos.iso.part-*
 
       - name: Simpan log bina
         if: always()
@@ -43,12 +43,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || format('build-{0}', github.run_number) }}
-          name: SmartOS ISO (bina #${{ github.run_number }})
+          name: FaqehOS ISO (bina #${{ github.run_number }})
           body: |
-            Muat turun SEMUA fail `smartos.iso.part-*` dan `smartos.iso.sha256`, kemudian gabungkan:
-            - Linux/Mac: `cat smartos.iso.part-* > smartos.iso && sha256sum -c smartos.iso.sha256`
-            - Windows (cmd): `copy /b smartos.iso.part-00+smartos.iso.part-01+smartos.iso.part-02 smartos.iso`
+            Muat turun SEMUA fail `faqehos.iso.part-*` dan `faqehos.iso.sha256`, kemudian gabungkan:
+            - Linux/Mac: `cat faqehos.iso.part-* > faqehos.iso && sha256sum -c faqehos.iso.sha256`
+            - Windows (cmd): `copy /b faqehos.iso.part-00+faqehos.iso.part-01+faqehos.iso.part-02 faqehos.iso`
               (sertakan semua bahagian mengikut urutan)
           files: |
-            smartos.iso.part-*
-            smartos.iso.sha256
+            faqehos.iso.part-*
+            faqehos.iso.sha256

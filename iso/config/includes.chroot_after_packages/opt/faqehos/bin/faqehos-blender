@@ -1,0 +1,8 @@
+#!/bin/sh
+# Membuka Blender dengan FaqehOS Bridge. Utamakan versi Flatpak (terkini).
+BRIDGE=/opt/faqehos/blender/faqehos_bridge.py
+if flatpak info org.blender.Blender >/dev/null 2>&1; then
+  exec flatpak run --share=network --filesystem=/opt/faqehos:ro --filesystem=~/.config/faqehos:ro \
+    org.blender.Blender --python "$BRIDGE" -- "$@"
+fi
+exec blender --python "$BRIDGE" -- "$@"

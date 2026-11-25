@@ -1,0 +1,80 @@
+#!/bin/sh
+set -e
+
+# ---- pengguna lalai (tanpa kata laluan) dan root dikunci
+G=""
+for g in audio video render input lpadmin netdev plugdev sudo adm systemd-journal; do getent group "$g" >/dev/null && G="$G,$g"; done
+id faqeh >/dev/null 2>&1 || useradd -m -s /bin/bash -G "${G#,}" faqeh
+passwd -d faqeh || true
+passwd -l root || true
+
+# ---- jenama: os-release, nama hos, banner (ID=debian dikekalkan supaya alat seperti apt/unattended-upgrades terus berfungsi)
+rm -f /etc/os-release
+cat > /etc/os-release <<'EOT'
+PRETTY_NAME="FaqehOS 0.3"
+NAME="FaqehOS"
+VERSION_ID="0.3"
+VERSION="0.3.0"
+VERSION_CODENAME=trixie
+ID=debian
+EOT
+echo faqehos > /etc/hostname
+: > /etc/motd; : > /etc/issue; : > /etc/issue.net
+
+# ---- boot senyap: tiada banner log masuk (autologin dikonfigurasi melalui drop-in systemd)
+touch /etc/skel/.hushlogin /home/faqeh/.hushlogin
+chown faqeh:faqeh /home/faqeh/.hushlogin
+
+# ---- .bash_profile dicipta di sini (fail bertitik sering hilang semasa muat naik web)
+cat > /etc/skel/.bash_profile <<'EOT'
+# Mulakan sesi FaqehOS (labwc + taskbar) pada konsol pertama. Sandaran: mod kiosk (cage).
+if [ -z "$WAYLAND_DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+  export WLR_NO_HARDWARE_CURSORS=1 WLR_RENDERER_ALLOW_SOFTWARE=1 XDG_CURRENT_DESKTOP=labwc XDG_SESSION_TYPE=wayland
+  labwc > "$HOME/labwc.log" 2>&1
+  [ $? -eq 0 ] && exit 0
+  echo "labwc gagal. Mencuba mod kiosk (cage)..."
+  cage -s -- /opt/faqehos/bin/faqehos-session > "$HOME/cage.log" 2>&1
+  echo "Mencuba mod perisian (pixman)..."
+  WLR_RENDERER=pixman LIBGL_ALWAYS_SOFTWARE=1 cage -s -- /opt/faqehos/bin/faqehos-session > "$HOME/cage-soft.log" 2>&1
+  echo "FaqehOS gagal dimulakan. Log: ~/labwc.log ~/cage.log ~/cage-soft.log ~/service.log ~/shell.log ~/health.log"
+fi
+EOT
+cp /etc/skel/.bash_profile /home/faqeh/.bash_profile
+chown faqeh:faqeh /home/faqeh/.bash_profile
+
+# ---- persekitaran terminal (Claude Code / Codex)
+grep -q "faqehos/shell.sh" /etc/bash.bashrc || echo '[ -f /etc/faqehos/shell.sh ] && . /etc/faqehos/shell.sh' >> /etc/bash.bashrc
+
+# ---- bit boleh laku (muat naik web membuangnya)
+chmod +x /etc/xdg/labwc/autostart /opt/faqehos/bin/* /opt/faqehos/shell/*.py /opt/faqehos/service/*.py 2>/dev/null || true
+
+# ---- pakej pilihan: kegagalan tidak menggagalkan build
+apt-get update -qq || true
+apt-get install -y --no-install-recommends gir1.2-gtklayershell-0.1 || echo "AMARAN: gir1.2-gtklayershell-0.1 tiada; desktop menggunakan tetingkap biasa"
+apt-get install -y --no-install-recommends mesa-va-drivers intel-media-va-driver vainfo || true
+# pemasang (eksperimen): Calamares dengan jenama FaqehOS; pilihan bahasa disediakan pada halaman Welcome
+if apt-get install -y --no-install-recommends calamares calamares-settings-debian os-prober; then
+  if [ -d /etc/calamares ]; then
+    mkdir -p /etc/calamares/branding/faqehos
+    cp -a /opt/faqehos/installer/branding/. /etc/calamares/branding/faqehos/
+    sed -i 's/^branding:.*/branding: faqehos/' /etc/calamares/settings.conf || true
+  fi
+else
+  echo "AMARAN: calamares tidak dapat dipasang; tiada pemasang dalam ISO ini"
+fi
+
+# ---- perkhidmatan
+systemctl enable NetworkManager cups avahi-daemon bluetooth nftables zramswap earlyoom power-profiles-daemon thermald irqbalance \
+  faqehos-update.timer faqehos-ai-tools.timer faqehos-firstboot.service || true
+systemctl disable clamav-freshclam clamav-daemon 2>/dev/null || true   # kemas kini ClamAV dikendalikan oleh faqehos-update (jimat RAM)
+systemctl mask cups-browsed 2>/dev/null || true
+
+# ---- Flathub (Faqeh Store) dan fail .exe dibuka dengan Wine
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+mkdir -p /etc/xdg
+printf '[Default Applications]\napplication/x-ms-dos-executable=wine.desktop\napplication/x-msi=wine.desktop\n' > /etc/xdg/mimeapps.list
+
+# ---- ikon, tema boot
+gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
+plymouth-set-default-theme faqehos || echo "AMARAN: tema Plymouth tidak dijumpai"
+update-initramfs -u

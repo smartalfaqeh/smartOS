@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Tetapan
+Icon=faqehos
+StartupWMClass=faqehos-settings
+NoDisplay=true
+Exec=/opt/faqehos/shell/faqehos-window.py --view settings

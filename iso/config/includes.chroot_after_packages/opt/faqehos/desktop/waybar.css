@@ -1,0 +1,11 @@
+@define-color acc #2de2d6;
+* { font-family: "Noto Sans", "DejaVu Sans", "Noto Color Emoji", sans-serif; font-size: 13px; letter-spacing: 0; border: none; border-radius: 0; min-height: 0; }
+window#waybar { background: rgba(6, 28, 33, 0.95); color: #e2fbf8; border-top: 1px solid alpha(@acc, 0.45); }
+#image { padding: 0 16px; margin: 4px 6px; border-radius: 14px; transition: background 150ms; }
+#image:hover { background: alpha(@acc, 0.22); box-shadow: 0 0 14px alpha(@acc, 0.55); }
+#taskbar button { padding: 0 12px; margin: 6px 3px; border-radius: 10px; background: transparent; color: #cfeeee; border-bottom: 2px solid transparent; transition: background 150ms; }
+#taskbar button:hover { background: rgba(255, 255, 255, 0.10); }
+#taskbar button.active { background: alpha(@acc, 0.16); border-bottom: 2px solid @acc; }
+#pulseaudio, #network, #battery, #clock, #custom-power { padding: 0 12px; margin: 6px 0; }
+#battery.warning { color: #f8cd3a; } #battery.critical { color: #ff9b9b; }
+#custom-power:hover, #clock:hover, #pulseaudio:hover, #network:hover, #battery:hover { background: rgba(255, 255, 255, 0.10); border-radius: 10px; }

@@ -1,0 +1,7 @@
+[Unit]
+Description=FaqehOS kemas kini automatik (Blender dan Flatpak)
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/opt/faqehos/bin/faqehos-update

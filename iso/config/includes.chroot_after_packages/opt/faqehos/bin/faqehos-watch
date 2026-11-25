@@ -1,0 +1,19 @@
+#!/bin/sh
+# Menjaga desktop dan bar tugas sentiasa hidup (mulakan semula jika terhenti) dan mencatat kesihatan sistem ke ~/health.log.
+WIN=/opt/faqehos/shell/faqehos-window.py
+UID_=$(id -u)
+css() { [ -f "$HOME/.config/faqehos/waybar.css" ] && echo "$HOME/.config/faqehos/waybar.css" || echo /opt/faqehos/desktop/waybar.css; }
+start_desktop() { setsid "$WIN" --view desktop --appid faqehos-desktop $1 > "$HOME/desktop.log" 2>&1 & }
+start_bar() { ( sleep "$1"; exec waybar -c /opt/faqehos/desktop/waybar.json -s "$(css)" ) > "$HOME/waybar.log" 2>&1 & }
+start_desktop --intro
+start_bar 5
+n=0
+while sleep 15; do
+  pgrep -u "$UID_" -f "faqehos-window.py --view desktop" >/dev/null || { echo "$(date -Is) desktop terhenti, dimulakan semula"; start_desktop; }
+  pgrep -u "$UID_" -x waybar >/dev/null || { echo "$(date -Is) waybar terhenti, dimulakan semula"; start_bar 0; }
+  c=$(pgrep -u "$UID_" -fc "faqehos-window.py --view start"); [ "${c:-0}" -gt 1 ] && pkill -u "$UID_" -o -f "faqehos-window.py --view start"
+  n=$((n+1))
+  if [ $((n % 4)) -eq 0 ]; then
+    echo "$(date -Is) mem_avail_kB=$(awk '/MemAvailable/{print $2}' /proc/meminfo) load=$(cut -d' ' -f1 /proc/loadavg)"
+  fi
+done

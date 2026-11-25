@@ -1,0 +1,72 @@
+{
+  "layer": "top",
+  "position": "bottom",
+  "height": 48,
+  "spacing": 8,
+  "modules-left": [
+    "image#start",
+    "wlr/taskbar"
+  ],
+  "modules-right": [
+    "pulseaudio",
+    "network",
+    "battery",
+    "clock",
+    "custom/power"
+  ],
+  "image#start": {
+    "path": "/opt/faqehos/shell/logo.png",
+    "size": 36,
+    "tooltip": false,
+    "on-click": "/opt/faqehos/bin/faqehos-start",
+    "on-click-right": "/opt/faqehos/bin/faqehos-ctx left"
+  },
+  "wlr/taskbar": {
+    "format": "{icon} {title:.18}",
+    "icon-size": 22,
+    "tooltip-format": "{title}",
+    "on-click": "minimize-raise",
+    "on-click-middle": "close",
+    "ignore-list": [
+      "faqehos-desktop",
+      "faqehos-start",
+      "faqehos-power"
+    ],
+    "on-click-right": "maximize"
+  },
+  "pulseaudio": {
+    "format": "🔊 {volume}%",
+    "format-muted": "🔇 senyap",
+    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "on-scroll-up": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+",
+    "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
+    "on-click-right": "/opt/faqehos/bin/faqehos-ctx right"
+  },
+  "network": {
+    "format-wifi": "📶 {essid}",
+    "format-ethernet": "🌐 {ifname}",
+    "format-disconnected": "⚠️ tiada rangkaian",
+    "tooltip-format": "{ifname}: {ipaddr}",
+    "on-click": "/opt/faqehos/shell/faqehos-window.py --view settings --page network --appid faqehos-settings"
+  },
+  "battery": {
+    "format": "🔋 {capacity}%",
+    "format-charging": "⚡ {capacity}%",
+    "states": {
+      "warning": 20,
+      "critical": 10
+    },
+    "on-click": "/opt/faqehos/shell/faqehos-window.py --view settings --page system --appid faqehos-settings"
+  },
+  "clock": {
+    "format": "{:%H:%M}",
+    "tooltip-format": "{:%A, %d %B %Y}",
+    "on-click-right": "/opt/faqehos/bin/faqehos-ctx right"
+  },
+  "custom/power": {
+    "format": "⏻",
+    "tooltip": false,
+    "on-click": "/opt/faqehos/shell/faqehos-window.py --view power --appid faqehos-power",
+    "on-click-right": "/opt/faqehos/bin/faqehos-ctx right"
+  }
+}

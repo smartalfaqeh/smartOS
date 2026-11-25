@@ -1,0 +1,4 @@
+#!/bin/sh
+# Menu klik kanan bar tugas (bertukar buka/tutup). Argumen: left (lalai) atau right.
+if pgrep -f "faqehos-window.py --view ctxmenu" >/dev/null; then pkill -f "faqehos-window.py --view ctxmenu"; exit 0; fi
+exec /opt/faqehos/shell/faqehos-window.py --view ctxmenu --anchor "${1:-left}" --appid faqehos-ctx

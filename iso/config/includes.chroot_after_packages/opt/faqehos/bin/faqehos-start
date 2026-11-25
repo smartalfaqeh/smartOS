@@ -1,0 +1,4 @@
+#!/bin/sh
+# Buka/tutup menu mula (butang logo pada taskbar atau Super+Ruang)
+if pgrep -f "faqehos-window.py --view start" >/dev/null; then pkill -f "faqehos-window.py --view start"; exit 0; fi
+exec /opt/faqehos/shell/faqehos-window.py --view start --appid faqehos-start

@@ -1,0 +1,31 @@
+---
+componentName: faqehos
+welcomeStyleCalamares: true
+welcomeExpandingLogo: false
+windowExpanding: normal
+windowSize: 800px,520px
+windowPlacement: center
+strings:
+  productName: FaqehOS
+  shortProductName: FaqehOS
+  version: 0.3
+  shortVersion: 0.3
+  versionedName: FaqehOS 0.3
+  shortVersionedName: FaqehOS 0.3
+  bootloaderEntryName: FaqehOS
+  productUrl: ""
+  supportUrl: ""
+  knownIssuesUrl: ""
+  releaseNotesUrl: ""
+  donateUrl: ""
+images:
+  productLogo: "logo.png"
+  productIcon: "logo.png"
+  productWelcome: "logo.png"
+slideshow: "show.qml"
+slideshowAPI: 1
+style:
+  sidebarBackground: "#06222a"
+  sidebarText: "#e2fbf8"
+  sidebarTextSelect: "#02262b"
+  sidebarTextHighlight: "#2de2d6"

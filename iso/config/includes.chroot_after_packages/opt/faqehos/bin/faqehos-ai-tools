@@ -1,0 +1,17 @@
+#!/bin/sh
+# (root) Pasang/kemas kini Claude Desktop rasmi daripada repositori apt Anthropic. Dicetuskan oleh pemasa mingguan atau butang pemasangan.
+D=/var/lib/faqehos; mkdir -p "$D"
+exec >> "$D/ai-tools.log" 2>&1
+echo "== $(date -Is) =="
+status() { printf '{"desktop":"%s"}\n' "$1" > "$D/ai-tools.status"; }
+curl -fsS --max-time 8 -o /dev/null https://downloads.claude.ai/claude-desktop/key.asc || { echo "tiada internet"; status offline; exit 0; }
+AVAIL=$(df -BM --output=avail /var | tail -1 | tr -dc 0-9); AVAIL=${AVAIL:-0}
+if ! dpkg -s claude-desktop >/dev/null 2>&1 && [ "$AVAIL" -lt 2500 ]; then echo "ruang tidak mencukupi: ${AVAIL} MB (perlu 2500 MB)"; status "ruang-tidak-cukup"; exit 0; fi
+KEY=/usr/share/keyrings/claude-desktop-archive-keyring.asc
+curl -fsSL -o "$KEY.tmp" https://downloads.claude.ai/claude-desktop/key.asc || { status gagal; exit 1; }
+FP=$(gpg --show-keys --with-colons "$KEY.tmp" 2>/dev/null | awk -F: '/^fpr:/ {print $10; exit}')
+if [ "$FP" != "31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE" ]; then echo "cap jari kunci tidak sepadan: $FP"; rm -f "$KEY.tmp"; status "kunci-tidak-sah"; exit 1; fi
+mv "$KEY.tmp" "$KEY"
+echo "deb [arch=amd64,arm64 signed-by=$KEY] https://downloads.claude.ai/claude-desktop/apt/stable stable main" > /etc/apt/sources.list.d/claude-desktop.list
+apt-get update -qq
+apt-get install -y -qq --no-install-recommends claude-desktop gnome-keyring && status dipasang || status gagal

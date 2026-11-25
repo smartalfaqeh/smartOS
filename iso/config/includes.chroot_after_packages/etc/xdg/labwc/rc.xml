@@ -1,24 +1,24 @@
 <?xml version="1.0"?>
 <labwc_config>
   <theme>
-    <name>SmartOS</name>
+    <name>FaqehOS</name>
     <cornerRadius>8</cornerRadius>
     <font place="" name="Noto Sans" size="10"/>
   </theme>
   <focus><followMouse>no</followMouse><raiseOnFocus>no</raiseOnFocus></focus>
   <keyboard>
     <default />
-    <keybind key="W-space"><action name="Execute" command="/opt/smartos/bin/smartos-start"/></keybind>
-    <keybind key="W-e"><action name="Execute" command="/opt/smartos/shell/smartos-window.py --view files"/></keybind>
+    <keybind key="W-space"><action name="Execute" command="/opt/faqehos/bin/faqehos-start"/></keybind>
+    <keybind key="W-e"><action name="Execute" command="/opt/faqehos/shell/faqehos-window.py --view files"/></keybind>
     <keybind key="W-d"><action name="ToggleShowDesktop"/></keybind>
     <keybind key="W-Up"><action name="ToggleMaximize"/></keybind>
     <keybind key="C-A-t"><action name="Execute" command="foot"/></keybind>
   </keyboard>
   <windowRules>
-    <windowRule identifier="smartos-desktop" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes">
+    <windowRule identifier="faqehos-desktop" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes">
       <action name="ToggleAlwaysOnBottom"/>
     </windowRule>
-    <windowRule identifier="smartos-start" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes"/>
-    <windowRule identifier="smartos-power" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes"/>
+    <windowRule identifier="faqehos-start" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes"/>
+    <windowRule identifier="faqehos-power" serverDecoration="no" skipTaskbar="yes" skipWindowSwitcher="yes"/>
   </windowRules>
 </labwc_config>

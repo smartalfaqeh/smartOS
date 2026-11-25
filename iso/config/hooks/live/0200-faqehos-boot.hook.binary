@@ -1,0 +1,14 @@
+#!/bin/sh
+# Jenama menu boot (BIOS dan UEFI): tukar tajuk dan sembunyikan menu (tekan Esc/Shift untuk memaparkannya).
+for f in binary/boot/grub/grub.cfg binary/boot/grub/*.cfg binary/isolinux/*.cfg binary/boot/grub/live-theme/*.txt; do
+  [ -f "$f" ] || continue
+  sed -i -e 's/Debian GNU\/Linux/FaqehOS/g' -e 's/Live system/FaqehOS/g' -e 's/Debian/FaqehOS/g' "$f" || true
+done
+if [ -f binary/boot/grub/grub.cfg ]; then
+  sed -i '1i set timeout_style=hidden' binary/boot/grub/grub.cfg || true
+  sed -i -E 's/^([[:space:]]*)set timeout=.*/\1set timeout=1/' binary/boot/grub/grub.cfg || true
+fi
+for f in binary/isolinux/isolinux.cfg binary/isolinux/menu.cfg binary/isolinux/stdmenu.cfg binary/isolinux/live.cfg; do
+  [ -f "$f" ] && sed -i -E 's/^[[:space:]]*timeout .*/timeout 10/I' "$f" || true
+done
+exit 0

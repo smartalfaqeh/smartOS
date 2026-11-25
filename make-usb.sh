@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Tulis SmartOS ke pemacu USB dan cipta partition persistence (tetapan & app kekal).
-# Guna:  sudo ./make-usb.sh smartos.iso /dev/sdX      (gunakan lsblk untuk cari sdX)
+# Tulis FaqehOS ke pemacu USB dan cipta partition persistence (tetapan & app kekal).
+# Guna:  sudo ./make-usb.sh faqehos.iso /dev/sdX      (gunakan lsblk untuk cari sdX)
 # AMARAN: semua data pada USB itu akan dipadam.
 set -euo pipefail
 ISO="${1:-}"; DEV="${2:-}"
 [ "$(id -u)" = 0 ] || { echo "Jalankan dengan sudo"; exit 1; }
-[ -f "$ISO" ] && [ -b "$DEV" ] || { echo "Guna: sudo $0 smartos.iso /dev/sdX"; exit 1; }
+[ -f "$ISO" ] && [ -b "$DEV" ] || { echo "Guna: sudo $0 faqehos.iso /dev/sdX"; exit 1; }
 [ "$(lsblk -dno TYPE "$DEV")" = disk ] || { echo "$DEV mesti keseluruhan cakera (contoh /dev/sdb), bukan partition"; exit 1; }
 if [ "$(lsblk -dno RM "$DEV")" != 1 ] && [ "$(lsblk -dno TRAN "$DEV")" != usb ]; then
   echo "$DEV bukan peranti USB. Dibatalkan demi keselamatan."; exit 1

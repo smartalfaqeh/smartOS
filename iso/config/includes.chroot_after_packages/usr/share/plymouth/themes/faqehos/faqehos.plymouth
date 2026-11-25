@@ -1,0 +1,7 @@
+[Plymouth Theme]
+Name=FaqehOS
+Description=Skrin boot FaqehOS
+ModuleName=script
+[script]
+ImageDir=/usr/share/plymouth/themes/faqehos
+ScriptFile=/usr/share/plymouth/themes/faqehos/faqehos.script

@@ -10,9 +10,9 @@ lb config noauto \
   --apt-recommends false \
   --firmware-chroot true \
   --memtest none \
-  --iso-application "SmartOS" \
-  --iso-volume "SmartOS" \
-  --iso-publisher "SmartOS" \
-  --image-name smartos \
-  --bootappend-live "boot=live components persistence quiet splash loglevel=0 vt.global_cursor_default=0 systemd.show_status=0 apparmor=1 security=apparmor username=smart hostname=smartos locales=ms_MY.UTF-8 keyboard-layouts=us timezone=Asia/Kuala_Lumpur" \
+  --iso-application "FaqehOS" \
+  --iso-volume "FaqehOS" \
+  --iso-publisher "FaqehOS" \
+  --image-name faqehos \
+  --bootappend-live "boot=live components persistence quiet splash loglevel=0 consoleblank=0 vt.global_cursor_default=0 systemd.show_status=0 apparmor=1 security=apparmor username=faqeh hostname=faqehos locales=ms_MY.UTF-8 keyboard-layouts=us timezone=Asia/Kuala_Lumpur" \
   "${@}"

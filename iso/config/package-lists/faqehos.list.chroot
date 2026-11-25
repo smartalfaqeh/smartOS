@@ -1,0 +1,90 @@
+# --- teras sistem ---
+live-boot
+live-config
+live-config-systemd
+systemd-sysv
+sudo
+locales
+dbus-user-session
+polkitd
+pkexec
+network-manager
+ca-certificates
+curl
+git
+gnupg
+# --- desktop (labwc + waybar) ---
+labwc
+waybar
+xwayland
+foot
+adwaita-icon-theme
+mesa-vulkan-drivers
+libgl1-mesa-dri
+mesa-utils
+vulkan-tools
+fonts-noto-core
+fonts-noto-color-emoji
+fonts-liberation
+fonts-dejavu-core
+# --- shell FaqehOS ---
+python3
+python3-gi
+gir1.2-gtk-3.0
+gir1.2-webkit2-4.1
+# --- boot splash ---
+plymouth
+plymouth-themes
+# --- firmware ---
+firmware-linux
+firmware-misc-nonfree
+firmware-iwlwifi
+firmware-realtek
+firmware-atheros
+# --- audio, bluetooth, storan ---
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+bluez
+udisks2
+gvfs
+# --- cetakan dan pengimbas tanpa pemacu ---
+cups
+cups-client
+cups-filters
+ipp-usb
+avahi-daemon
+sane-airscan
+hplip
+printer-driver-all
+printer-driver-gutenprint
+printer-driver-brlaser
+# --- pelayar dan media (alat pejabat: Google Docs/Sheets/Slides melalui pelayar) ---
+chromium
+firefox-esr
+mpv
+ffmpeg
+# --- 3D dan kreatif ---
+blender
+# --- keserasian Windows dan Flatpak (Faqeh Store) ---
+wine
+flatpak
+xdg-desktop-portal-gtk
+# --- alat pembangun (Claude Code dan Codex memerlukan Node.js) ---
+nodejs
+npm
+# --- keselamatan ---
+nftables
+apparmor
+apparmor-utils
+unattended-upgrades
+clamav
+bubblewrap
+# --- prestasi dan haba ---
+zram-tools
+earlyoom
+power-profiles-daemon
+thermald
+irqbalance
+gamemode

@@ -1,0 +1,2 @@
+# Lindungi desktop daripada dimatikan semasa memori rendah; matikan aplikasi besar dahulu.
+EARLYOOM_ARGS="-m 5 -s 8 --avoid '(^|/)(labwc|waybar|Xwayland|python3|pipewire|wireplumber|dbus-daemon|systemd)$' --prefer '(^|/)(chromium|chrome|firefox-esr|flatpak|node|npm|clamscan|blender)$'"

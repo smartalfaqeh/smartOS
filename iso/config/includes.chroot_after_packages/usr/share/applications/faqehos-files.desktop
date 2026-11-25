@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Fail
+Icon=faqehos
+StartupWMClass=faqehos-files
+NoDisplay=true
+Exec=/opt/faqehos/shell/faqehos-window.py --view files

@@ -1,0 +1,74 @@
+Window.SetBackgroundTopColor(0.02, 0.10, 0.13);
+Window.SetBackgroundBottomColor(0.00, 0.02, 0.03);
+W = Window.GetWidth();
+H = Window.GetHeight();
+CX = W / 2;
+CY = H * 0.42;
+
+glow.image = Image("glow.png");
+glow.sprite = Sprite(glow.image);
+glow.sprite.SetX(CX - glow.image.GetWidth() / 2);
+glow.sprite.SetY(CY - glow.image.GetHeight() / 2);
+glow.sprite.SetZ(1);
+
+logo.image = Image("logo.png");
+LW = logo.image.GetWidth();
+LH = logo.image.GetHeight();
+logo.sprite = Sprite(logo.image);
+logo.sprite.SetX(CX - LW / 2);
+logo.sprite.SetY(CY - LH / 2);
+logo.sprite.SetZ(2);
+
+spark.image = Image("spark.png");
+for (i = 0; i < 7; i++) {
+  spark[i].sprite = Sprite(spark.image);
+  spark[i].sprite.SetZ(3);
+  spark[i].sprite.SetOpacity(0);
+  spark[i].phase = Math.Random() * 6.28;
+  spark[i].speed = 0.04 + Math.Random() * 0.05;
+  spark[i].x = CX + (Math.Random() - 0.5) * LW * 0.85;
+  spark[i].y = CY + (Math.Random() - 0.5) * LH * 0.8;
+  spark[i].sprite.SetX(spark[i].x);
+  spark[i].sprite.SetY(spark[i].y);
+}
+
+track.image = Image("track.png");
+BAR_Y = CY + LH / 2 + 46;
+track.sprite = Sprite(track.image);
+track.sprite.SetX(CX - track.image.GetWidth() / 2);
+track.sprite.SetY(BAR_Y);
+track.sprite.SetZ(2);
+
+fill.orig = Image("fill.png");
+fill.sprite = Sprite();
+fill.sprite.SetX(CX - track.image.GetWidth() / 2);
+fill.sprite.SetY(BAR_Y);
+fill.sprite.SetZ(3);
+
+t = 0;
+fun refresh() {
+  t++;
+  glow.sprite.SetOpacity(0.62 + 0.30 * Math.Sin(t / 20));
+  for (i = 0; i < 7; i++) {
+    v = Math.Sin(t * spark[i].speed + spark[i].phase);
+    if (v < 0) {
+      v = 0;
+      if (Math.Random() < 0.02) {
+        spark[i].x = CX + (Math.Random() - 0.5) * LW * 0.85;
+        spark[i].y = CY + (Math.Random() - 0.5) * LH * 0.8;
+        spark[i].sprite.SetX(spark[i].x);
+        spark[i].sprite.SetY(spark[i].y);
+      }
+    }
+    spark[i].sprite.SetOpacity(v);
+  }
+}
+Plymouth.SetRefreshFunction(refresh);
+
+fun progress_cb(duration, progress) {
+  if (progress > 1) progress = 1;
+  w = Math.Int(track.image.GetWidth() * progress);
+  if (w < 1) w = 1;
+  fill.sprite.SetImage(fill.orig.Scale(w, fill.orig.GetHeight()));
+}
+Plymouth.SetBootProgressFunction(progress_cb);

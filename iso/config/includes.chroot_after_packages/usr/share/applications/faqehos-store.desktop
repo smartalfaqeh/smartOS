@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Faqeh Store
+Icon=faqehos
+StartupWMClass=faqehos-store
+NoDisplay=true
+Exec=/opt/faqehos/shell/faqehos-window.py --view store

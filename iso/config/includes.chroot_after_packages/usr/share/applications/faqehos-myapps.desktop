@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=My Faqeh App
+Icon=faqehos
+StartupWMClass=faqehos-myapps
+NoDisplay=true
+Exec=/opt/faqehos/shell/faqehos-window.py --view myapps

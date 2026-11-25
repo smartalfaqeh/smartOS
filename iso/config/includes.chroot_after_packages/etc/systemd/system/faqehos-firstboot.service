@@ -1,0 +1,11 @@
+[Unit]
+Description=FaqehOS: persediaan pertama selepas pemasangan
+ConditionPathExists=!/run/live
+ConditionPathExists=!/var/lib/faqehos/firstboot-done
+Before=getty@tty1.service
+After=local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/opt/faqehos/bin/faqehos-firstboot
+[Install]
+WantedBy=multi-user.target

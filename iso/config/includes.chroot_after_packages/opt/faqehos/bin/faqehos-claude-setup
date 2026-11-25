@@ -1,0 +1,13 @@
+#!/bin/sh
+# Pasang/kemas kini Claude Code (pemasang rasmi) apabila ada internet dan ruang cakera. Dijalankan di latar belakang selepas log masuk.
+LOG="$HOME/ai-tools.log"; export PATH="$HOME/.local/bin:$PATH"
+curl -fsS --max-time 8 -o /dev/null https://claude.ai/install.sh || { echo "$(date -Is) Claude Code: tiada internet" >> "$LOG"; exit 0; }
+if command -v claude >/dev/null 2>&1; then
+  echo "$(date -Is) Claude Code sudah dipasang; menyemak kemas kini" >> "$LOG"
+  claude update >> "$LOG" 2>&1 || true
+  exit 0
+fi
+AVAIL=$(df -BM --output=avail "$HOME" 2>/dev/null | tail -1 | tr -dc 0-9)
+if [ "${AVAIL:-0}" -lt 700 ]; then echo "$(date -Is) Claude Code: ruang tidak mencukupi (${AVAIL:-0} MB)" >> "$LOG"; exit 0; fi
+echo "$(date -Is) Memasang Claude Code" >> "$LOG"
+curl -fsSL https://claude.ai/install.sh | bash >> "$LOG" 2>&1

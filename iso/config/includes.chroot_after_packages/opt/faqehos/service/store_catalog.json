@@ -1,0 +1,23 @@
+{
+  "note": "Katalog Faqeh Store. Hanya ID Flatpak dalam senarai ini boleh dipasang (dipasang daripada Flathub, ditandatangani GPG dan berjalan dalam sandbox Flatpak).",
+  "apps": [
+    {"id": "com.google.Chrome", "name": "Google Chrome", "icon": "🌐", "cat": "Internet", "desc": "Pelayar Google Chrome rasmi."},
+    {"id": "org.mozilla.firefox", "name": "Firefox", "icon": "🦊", "cat": "Internet", "desc": "Pelayar web Mozilla."},
+    {"id": "com.valvesoftware.Steam", "name": "Steam", "icon": "🎮", "cat": "Permainan", "desc": "Kedai dan pelancar permainan dengan Proton."},
+    {"id": "net.lutris.Lutris", "name": "Lutris", "icon": "🍷", "cat": "Permainan", "desc": "Pengurus permainan dan app Windows."},
+    {"id": "com.usebottles.bottles", "name": "Bottles", "icon": "🍾", "cat": "Permainan", "desc": "Jalankan app Windows dalam persekitaran berasingan."},
+    {"id": "org.blender.Blender", "name": "Blender", "icon": "🧊", "cat": "Kreatif", "desc": "Versi Blender terkini (disepadukan dengan FaqehOS)."},
+    {"id": "org.gimp.GIMP", "name": "GIMP", "icon": "🖌️", "cat": "Kreatif", "desc": "Penyunting imej."},
+    {"id": "org.kde.krita", "name": "Krita", "icon": "🎨", "cat": "Kreatif", "desc": "Lukisan digital."},
+    {"id": "org.kde.kdenlive", "name": "Kdenlive", "icon": "🎞️", "cat": "Kreatif", "desc": "Penyunting video."},
+    {"id": "com.obsproject.Studio", "name": "OBS Studio", "icon": "📹", "cat": "Kreatif", "desc": "Rakaman dan siaran langsung."},
+    {"id": "org.audacityteam.Audacity", "name": "Audacity", "icon": "🎙️", "cat": "Kreatif", "desc": "Penyunting audio."},
+    {"id": "org.godotengine.Godot", "name": "Godot", "icon": "🕹️", "cat": "Pembangunan", "desc": "Enjin permainan 2D/3D."},
+    {"id": "com.visualstudio.code", "name": "VS Code", "icon": "💻", "cat": "Pembangunan", "desc": "Penyunting kod."},
+    {"id": "org.libreoffice.LibreOffice", "name": "LibreOffice", "icon": "📄", "cat": "Pejabat", "desc": "Suite pejabat luar talian (pilihan; lalai FaqehOS ialah alat Google)."},
+    {"id": "org.videolan.VLC", "name": "VLC", "icon": "🔶", "cat": "Media", "desc": "Pemain media serba boleh."},
+    {"id": "com.spotify.Client", "name": "Spotify", "icon": "🎵", "cat": "Media", "desc": "Muzik strim."},
+    {"id": "com.discordapp.Discord", "name": "Discord", "icon": "💬", "cat": "Komunikasi", "desc": "Sembang suara dan teks."},
+    {"id": "org.telegram.desktop", "name": "Telegram", "icon": "✈️", "cat": "Komunikasi", "desc": "Aplikasi mesej."}
+  ]
+}

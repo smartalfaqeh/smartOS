@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Pengurus Tugas
+Icon=faqehos
+StartupWMClass=faqehos-taskmgr
+NoDisplay=true
+Exec=/opt/faqehos/shell/faqehos-window.py --view taskmgr

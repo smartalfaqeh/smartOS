@@ -1,0 +1,5 @@
+#!/bin/sh
+# Sesi sandaran mod kiosk (cage): hanya desktop skrin penuh, tanpa taskbar.
+export WEBKIT_DISABLE_COMPOSITING_MODE=1 WEBKIT_DISABLE_DMABUF_RENDERER=1
+/usr/bin/python3 /opt/faqehos/service/faqehos_service.py > "$HOME/service.log" 2>&1 &
+exec /opt/faqehos/shell/faqehos-window.py --view desktop --layer normal --fullscreen 2> "$HOME/shell.log"
